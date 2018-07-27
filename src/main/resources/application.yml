@@ -1,0 +1,8 @@
+spring.data.elasticsearch.cluster-nodes: 192.168.199.139:9300
+spring.data.elasticsearch.cluster-name: elasticsearch-cluster
+#spring:
+#    data:
+#       elasticsearch:
+#           cluster-nodes: 192.168.199.139:9300
+#           cluster-name: elasticsearch-cluster
+           

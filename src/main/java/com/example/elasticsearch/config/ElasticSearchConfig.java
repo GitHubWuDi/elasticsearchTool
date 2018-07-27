@@ -7,6 +7,7 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,12 +20,24 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ElasticSearchConfig {
    
+	@Value("${spring.data.elasticsearch.cluster-nodes}")
+	private String clusterNodes;
+
+	@Value("${spring.data.elasticsearch.cluster-name}")
+	private String clusterName;
+	
 	@Bean
 	public TransportClient client() throws UnknownHostException{
-		TransportAddress node  = new TransportAddress(InetAddress.getByName("192.168.199.139"), 9300);
-		Settings settings = Settings.builder().put("cluster.name","elasticsearch-cluster").build();
+		Settings settings = Settings.builder().put("cluster.name",clusterName).build();
 		TransportClient client = new PreBuiltTransportClient(settings);
-		client.addTransportAddress(node);
+		String[] splitNodes = clusterNodes.split(",");
+		for (String node : splitNodes) {
+			String ip = node.split(":")[0];
+			String port = node.split(":")[1];
+			TransportAddress transNode  = new TransportAddress(InetAddress.getByName(ip), Integer.valueOf(port));
+			client.addTransportAddress(transNode);
+		}
 		return client;
+	
 	}
 }
