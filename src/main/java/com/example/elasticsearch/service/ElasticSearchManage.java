@@ -99,4 +99,22 @@ public interface ElasticSearchManage {
 	 * @return
 	 */
 	public int getAllRepliceCount(String indexName);
+	
+	/**
+	 * 根据索引获得对应的setting信息
+	 * @param indexName
+	 * @return
+	 */
+	public String getSetting(String indexName);
+	
+	/**
+	 * 根据index,type,id,field字段创建对应doc
+	 * @param indexName
+	 * @param type
+	 * @param id
+	 * @param field
+	 * @return
+	 */
+	public String createDoc(String indexName,String type,String id,Map<String,Object> field);
+	
 }

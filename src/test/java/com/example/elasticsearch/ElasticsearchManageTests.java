@@ -1,8 +1,9 @@
 package com.example.elasticsearch;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Test;
@@ -155,5 +156,35 @@ public class ElasticsearchManageTests {
 		int shardCountByIndexName = elasticSearchManage.getAllRepliceCount(indexName);
 		assertEquals(1, shardCountByIndexName);
 	}
+	
+	/**
+	 * 获得Setting的内容
+	 */
+	@Test
+	public void getSettingTest() {
+		String indexName = "kafka_elk_newlog-2018.07.23";
+		String setting = elasticSearchManage.getSetting(indexName);
+	}
+	/**
+	 * 创建对应的文档修改
+	 */
+	@Test
+	public void createDocTest(){
+		String indexName = "books";
+		String type="test";
+		String id ="1";
+		Map<String,Object> map  = new HashMap<>();
+		map.put("id", "1");
+		map.put("title", "test");
+		map.put("author", "wudi");
+		map.put("id", "1");
+		map.put("id", "1");
+		map.put("id", "1");
+		map.put("id", "1");
+		elasticSearchManage.createDoc(indexName, type, id, map);
+		
+	}
+	
+	
 
 }
