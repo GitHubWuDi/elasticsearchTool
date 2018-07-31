@@ -6,6 +6,10 @@ import java.lang.reflect.Field;
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+
+import com.example.elasticsearch.util.page.QueryCondition;
 
 /**
  * @author wudi
@@ -60,6 +64,141 @@ public class ElasticSearchUtil {
 		} catch (IOException e) {
 			logger.error("解析匹配错误", e);
 			return null;
+		}
+	}
+
+	/**
+	 * 查询语句
+	 * 
+	 * @param con
+	 * @return
+	 */
+	public static QueryBuilder toQueryBuild(QueryCondition con) {
+		QueryBuilder query = null;
+		switch (con.getCompareExpression()) {
+		/// <summary>
+		/// 等于
+		/// </summary>
+		case Eq:
+			query = QueryBuilders.termQuery(con.getField(), con.getValue1());
+			break;
+		/// <summary>
+		/// where a!=1
+		/// </summary>
+		case NotEq:
+			query = QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(con.getField(), con.getValue1()));
+			break;
+
+		/// <summary>
+		/// in (1,2,3)
+		/// </summary>
+		case In:
+			// FilterBuilder inFilter = FilterBuilders.inFilter("typeId", ids)
+			query = QueryBuilders.termsQuery(con.getField(), con.getValue1());
+			break;
+
+		/// <summary>
+		/// 之间
+		/// </summary>
+		case Between:
+			query = QueryBuilders.rangeQuery(con.getField()).gte(con.getValue1()).lt(con.getValue2());
+			break;
+		/// <summary>
+		/// is not null
+		/// </summary>
+		case NotNull:
+			// 参考https://blog.csdn.net/wangsht/article/details/52776139
+			// query=QueryBuilders.notQuery(QueryBuilders.missingQuery(con.getField()));
+			query = QueryBuilders.existsQuery(con.getField());
+			break;
+
+		/// <summary>
+		/// is null
+		/// </summary>
+		case IsNull:
+			// query=QueryBuilders.missingQuery(con.getField());
+			query = QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(con.getField()));
+			break;
+
+		/// <summary>
+		/// 类似
+		/// 不需要加配符号
+		/// </summary>
+		case Like:
+			query = QueryBuilders.wildcardQuery(con.getField(), "*" + con.getValue1() + "*");
+			break;
+
+		/// <summary>
+		/// like '%xx'
+		/// 不需要加配符号
+		/// </summary>
+		case LikeEnd:
+			query = QueryBuilders.wildcardQuery(con.getField(), "*" + con.getValue1());
+			break;
+		/// <summary>
+		/// like 'xx%'
+		/// 不需要加配符号
+		/// </summary>
+		case LikeBegin:
+			query = QueryBuilders.wildcardQuery(con.getField(), con.getValue1() + "*");
+			break;
+
+		/// <summary>
+		/// 大于
+		/// </summary>
+		case Gt:
+			query = QueryBuilders.rangeQuery(con.getField()).gt(con.getValue1());
+			break;
+
+		/// <summary>
+		/// 大于等于
+		/// </summary>
+		case Ge:
+			query = QueryBuilders.rangeQuery(con.getField()).gte(con.getValue1());
+			break;
+
+		/// <summary>
+		/// 小于等于
+		/// </summary>
+		case Le:
+			query = QueryBuilders.rangeQuery(con.getField()).lte(con.getValue1());
+			break;
+
+		/// <summary>
+		/// 小于
+		/// </summary>
+		case Lt:
+			query = QueryBuilders.rangeQuery(con.getField()).lt(con.getValue1());
+			break;
+
+		/// <summary>
+		/// 逻辑且
+		/// </summary>
+		case And:
+			QueryBuilder must1 = toQueryBuilder((QueryCondition) con.getValue1());
+			QueryBuilder must2 = toQueryBuilder((QueryCondition) con.getValue2());
+			query = QueryBuilders.boolQuery().must(must1).must(must2);
+
+			break;
+
+		/// <summary>
+		/// 逻辑或者
+		/// </summary>
+		case Or:
+			QueryBuilder queryBuilder1 = toQueryBuilder((QueryCondition) con.getValue1());
+			QueryBuilder queryBuilder2 = toQueryBuilder((QueryCondition) con.getValue2());
+
+			query = QueryBuilders.boolQuery().should(queryBuilder1).should(queryBuilder2);
+			break;
+
+		/// <summary>
+		/// 逻辑非
+		/// </summary>
+		case Not:
+			query = QueryBuilders.boolQuery().mustNot(toQueryBuilder((QueryCondition) con.getValue1()));
+
+			break;
+
 		}
 	}
 

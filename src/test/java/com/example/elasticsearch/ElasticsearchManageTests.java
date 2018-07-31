@@ -3,9 +3,15 @@ package com.example.elasticsearch;
 import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.log4j.Logger;
+import org.elasticsearch.common.settings.Settings;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +31,9 @@ import com.example.elasticsearch.vo.BookVO;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class ElasticsearchManageTests {
+
+	private static Logger logger = Logger.getLogger(ElasticsearchManageTests.class);
+	public static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
 	@Autowired
 	private ElasticSearchManage elasticSearchManage;
@@ -116,7 +125,7 @@ public class ElasticsearchManageTests {
 		boolean result = elasticSearchManage.setRepliceCountNum(indexName, repliceCount);
 		assertEquals(true, result);
 	}
-	
+
 	/**
 	 * 索引文档库总数测试
 	 */
@@ -136,7 +145,7 @@ public class ElasticsearchManageTests {
 		int shardCountByIndexName = elasticSearchManage.getShardCountByIndexName(indexName);
 		assertEquals(5, shardCountByIndexName);
 	}
-	
+
 	/**
 	 * 获得索引成功启动的分片总数
 	 */
@@ -146,7 +155,7 @@ public class ElasticsearchManageTests {
 		int shardCountByIndexName = elasticSearchManage.getSuccessShardCount(indexName);
 		assertEquals(5, shardCountByIndexName);
 	}
-	
+
 	/**
 	 * 获得副本数
 	 */
@@ -156,7 +165,7 @@ public class ElasticsearchManageTests {
 		int shardCountByIndexName = elasticSearchManage.getAllRepliceCount(indexName);
 		assertEquals(1, shardCountByIndexName);
 	}
-	
+
 	/**
 	 * 获得Setting的内容
 	 */
@@ -165,26 +174,223 @@ public class ElasticsearchManageTests {
 		String indexName = "kafka_elk_newlog-2018.07.23";
 		String setting = elasticSearchManage.getSetting(indexName);
 	}
+
 	/**
 	 * 创建对应的文档修改
 	 */
 	@Test
-	public void createDocTest(){
+	public void createDocTest() {
+		String format = format(new Date());
 		String indexName = "books";
-		String type="test";
-		String id ="1";
-		Map<String,Object> map  = new HashMap<>();
-		map.put("id", "1");
+		String type = "test";
+		String id = "1";
+		Map<String, Object> map = new HashMap<>();
 		map.put("title", "test");
 		map.put("author", "wudi");
-		map.put("id", "1");
-		map.put("id", "1");
-		map.put("id", "1");
-		map.put("id", "1");
-		elasticSearchManage.createDoc(indexName, type, id, map);
-		
+		map.put("word_count", 3000);
+		map.put("publish_date", format);
+		map.put("gt_word_count", 100);
+		map.put("lt_word_count", 2000);
+		String result = elasticSearchManage.createDoc(indexName, type, id, map);
+		assertEquals("success", result);
+	}
+
+	public static String format(Date date) {
+		SimpleDateFormat formatTool = new SimpleDateFormat();
+		formatTool.applyPattern(DEFAULT_DATE_PATTERN);
+		return formatTool.format(date);
+	}
+
+	/**
+	 * 删除对应Doc的Test
+	 */
+	@Test
+	public void delDocTest() {
+		String indexName = "books";
+		String type = "test";
+		String id = "1";
+		Boolean delDocByIndexName = elasticSearchManage.delDocByIndexName(indexName, type, id);
+		assertEquals(delDocByIndexName, true);
+	}
+
+	/**
+	 * 根据索引名称删除索引
+	 */
+	@Test
+	public void delIndexTest() {
+		String indexName = "packetbeat-6.3.1-2018.07.16";
+		Boolean delDocByIndexName = elasticSearchManage.delIndexByIndexName(indexName);
+		assertEquals(delDocByIndexName, true);
+	}
+
+	/**
+	 * 获得所有的索引
+	 */
+	@Test
+	public void getAllIndex() {
+		String[] allIndex = elasticSearchManage.getAllIndex();
+		assertEquals(12, allIndex.length);
+	}
+
+	/**
+	 * 获得所有的索引的个数
+	 */
+	@Test
+	public void getAllIndexCount() {
+		int count = elasticSearchManage.getAllIndexCount();
+		assertEquals(12, count);
+	}
+   
+	
+	/**
+	 * 根据索引获得对应的type集合
+	 */
+	@Test
+	public void getTypeByIndexTest() {
+		String indexName = "books";
+		List<String> list = elasticSearchManage.getTypesByIndexName(indexName);
+		assertEquals(1, list.size());
 	}
 	
+	/**
+	 * 获得index下面所有的fields
+	 */
+	@Test
+	public void getAllFieldsByIndexNameTest() {
+		String indexName = "books";
+		Set<String> set = elasticSearchManage.getAllFieldsByIndexName(indexName);
+		assertEquals(6, set.size());
+	}
 	
-
+	/**
+	 * 根据Index和Type获得对应成员变量
+	 */
+	@Test
+	public void getAllFieldsByIndexNameAndTypeTest() {
+		String indexName = "books";
+		String type = "test";
+		Set<String> set = elasticSearchManage.getAllFieldsByIndexNameAndType(indexName, type);
+		assertEquals(6, set.size());
+	}
+	
+	/**
+	 * 根据index,type,id获得doc信息
+	 */
+   @Test
+   public void getDocTest() {
+		String indexName = "books";
+		String type = "test";
+		String id ="1";
+		Map<String, Object> map = elasticSearchManage.getDoc(indexName, type, id);
+		logger.info("map info:" + map);
+	}
+	
+   /**
+    * 获得es集群名称
+    */
+   @Test
+   public void getClusterNameTest() {
+		 String clusterName = elasticSearchManage.getClusterName();
+		 assertEquals("elasticsearch-cluster", clusterName);
+	}
+   /**
+    * 获得集群的状态
+    */
+   @Test
+   public void getClusterStatusTest(){
+	   String esClusterHealthStatus = elasticSearchManage.getEsClusterHealthStatus();
+	   logger.info("esClusterHealthStatus:"+esClusterHealthStatus);
+	   assertEquals("GREEN", esClusterHealthStatus);
+	   
+   }
+   
+   /**
+    * 获得ES集群的DataNode
+    */
+   @Test
+   public void getDataNodeCountTest(){
+	   int dataNodeCount = elasticSearchManage.getDataNodeCount();
+	   logger.info("dataNodeCount:"+dataNodeCount);
+	   assertEquals(1, dataNodeCount);
+   }
+   
+   /**
+    *获得集群节点数 
+    */
+   @Test
+   public void getClusterNodeCountTest(){
+	   int clusterNodeCount = elasticSearchManage.getClusterNodeCount();
+	   assertEquals(1, clusterNodeCount);
+   }
+   
+   /**
+    * 别名是否存在
+    * 
+    */
+   @Test
+   public void isExistAliasTest(){
+	   String aliasName = "test";
+	   Boolean existAlias = elasticSearchManage.isExistAlias(aliasName);
+	   assertEquals(false, existAlias);
+   }
+   
+   /**
+    * 根据索引增加别名
+    * @param index
+    * @param aliasName
+    */
+   @Test
+   public void addAliasTest(){
+	   String indexName = "books";
+	   String aliasName = "test123";
+	   Boolean result = elasticSearchManage.addAlias(indexName, aliasName);
+	   assertEquals(true, result);
+   }
+   
+   /**
+    * 根据索引删除别名
+    */
+   @Test
+   public void delAliasTest(){
+	   String indexName = "books";
+	   String aliasName = "test123";
+	   Boolean result = elasticSearchManage.delAlias(indexName, aliasName);
+	   assertEquals(true, result);
+   }
+   
+   /**
+    * 根据索引更新Setting
+    */
+   @Test
+   public void updateSettingsByIndex(){
+	   String indexName = "books";
+	   Settings settings = Settings.builder().put("index.number_of_replicas",4).build();
+	   Boolean result = elasticSearchManage.updateSettingsByIndex(indexName, settings);
+	   assertEquals(true, result);
+   }
+   
+   @Test
+   public void checkIndexStatusTest(){
+	   String indexName = "books";
+	    String status = elasticSearchManage.checkIndexStatus(indexName);
+	    assertEquals("OPEN", status);
+   }
+   
+   /**
+    * 关闭索引
+    */
+   @Test
+   public void closeIndexByIndexNameTest(){
+	   String indexName = "books";
+	   Boolean result = elasticSearchManage.closeIndexByIndexName(indexName);
+	   assertEquals(true, result);
+   }
+   
+   @Test
+   public void openIndexByIndexName(){
+	   String indexName = "books";
+	   Boolean result = elasticSearchManage.openIndexByIndexName(indexName);
+	   assertEquals(true, result);
+   }
+   
 }

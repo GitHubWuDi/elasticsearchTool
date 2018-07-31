@@ -16,7 +16,7 @@ public class BookVO {
 	private String title; // 标题
 	private String author; // 作者名称
 	private Integer word_count; // 字数
-	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	//@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private Date publish_date; // 出版日期
 	private Integer gt_word_count; //大于某个数
 	private Integer lt_word_count; //小于某个数

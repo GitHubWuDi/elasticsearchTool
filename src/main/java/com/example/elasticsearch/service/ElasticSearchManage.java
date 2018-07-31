@@ -1,7 +1,12 @@
 package com.example.elasticsearch.service;
 
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.search.SearchHits;
 
 /**
 * @author wudi
@@ -116,5 +121,155 @@ public interface ElasticSearchManage {
 	 * @return
 	 */
 	public String createDoc(String indexName,String type,String id,Map<String,Object> field);
+	
+	/**
+	 * 根据id删除对应的doc
+	 * @param indexName
+	 * @param type
+	 * @param id
+	 * @return
+	 */
+	public Boolean delDocByIndexName(String indexName,String type,String id);
+	
+	/**
+	 * 删除索引 
+	 * @param indexName
+	 * @return
+	 */
+	public boolean delIndexByIndexName(String indexName);
+	
+	/**
+	 * 获得所有索引
+	 * @return
+	 */
+	public String[] getAllIndex();
+	
+	/**
+	 * 所有索引的个数
+	 * @return
+	 */
+	public int getAllIndexCount();
+	
+	/**
+	 * 获得某一个index下面所有的type
+	 * @param indexName
+	 * @return
+	 */
+	public List<String> getTypesByIndexName(String indexName);
+	
+	/**
+	 * 获得index所有字段的名称 
+	 * @param indexName
+	 * @return
+	 */
+	public Set<String> getAllFieldsByIndexName(String indexName);
+	
+	/**
+	 * 根据index和type获得对应的fields
+	 * @param indexName
+	 * @param type
+	 * @return
+	 */
+	public Set<String> getAllFieldsByIndexNameAndType(String indexName,String type);
+	/**
+	 * 根据indexName和type获得doc
+	 * @param indexName
+	 * @param type
+	 */
+	public Map<String,Object> getDoc(String indexName, String type,String id);
+	
+	/**
+	 * 根据index，type，searchType，input进行查询
+	 * @param index
+	 * @param type
+	 * @param searchType
+	 * @param input
+	 * @param start
+	 * @param size
+	 * @return
+	 */
+	public SearchHits getAllDocs(String index, String type, String searchType, String input, int start, int size);
+	
+	/**
+	 * 获得集群名称
+	 * @return
+	 */
+	public String getClusterName();
+	
+	/**
+	 * 获得集群状态
+	 * @return
+	 */
+	public String getEsClusterHealthStatus();
+	
+	/**
+	 * 返回ES集群dataNode的个数
+	 * @return
+	 */
+	public int getDataNodeCount();
+	
+	/**
+	 * 返回集群节点数
+	 * @return
+	 */
+	public int getClusterNodeCount();
+	
+	/**
+	 * 是否存在别名
+	 * @param aliasName
+	 * @return
+	 */
+	public Boolean isExistAlias(String aliasName);
+	
+	/**
+	 * 增加别名
+	 * @param index
+	 * @param aliasName
+	 */
+	public Boolean addAlias(String index,String aliasName); 
+	
+	/**
+	 * 根据索引删除别名
+	 * @param index
+	 * @param aliasName
+	 */
+	public Boolean delAlias(String indexName,String aliasName);
+	
+	/**
+	 * 检索索引状态（是否存在）
+	 * @param indexName
+	 * @return
+	 */
+	public  Boolean checkEsIndexState(String indexName);
+	
+	/**
+	 * 检查索引是否启动（关闭或者是打开）
+	 * @param indexName
+	 * @return
+	 */
+	public String checkIndexStatus(String indexName);
+	/**
+	 * 关闭索引
+	 * @param indexName
+	 * @return
+	 */
+	public Boolean closeIndexByIndexName(String indexName);
+	
+	
+	
+	/**
+	 * 打开索引(打开关闭索引)
+	 * @param indexName
+	 * @return
+	 */
+	public Boolean openIndexByIndexName(String indexName);
+	/**
+	 * 更新索引设置(更新索引设置，必须在关闭状态下进行更新)
+	 * You can't update the settings of index when the index is in open status. You need to close the index and update the settings and open the index.
+	 * @param index
+	 * @param settings
+	 * @return
+	 */
+	public Boolean updateSettingsByIndex(String indexName, Settings settings);
 	
 }

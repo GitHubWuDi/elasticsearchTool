@@ -2,24 +2,45 @@ package com.example.elasticsearch.service.impl;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
+import org.elasticsearch.action.admin.indices.alias.exists.AliasesExistResponse;
+import org.elasticsearch.action.admin.indices.close.CloseIndexResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.get.GetIndexResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.admin.indices.open.OpenIndexResponse;
 import org.elasticsearch.action.admin.indices.settings.get.GetSettingsResponse;
 import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.health.ClusterHealthStatus;
+import org.elasticsearch.cluster.health.ClusterIndexHealth;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -43,7 +64,10 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	private static final String number_of_shards = "index.number_of_shards"; // 分区数
 	private static final String number_of_replicas = "index.number_of_replicas"; // 副本数
 	private static final String max_result_window = "index.max_result_window"; // 最大返回结果数
+	private static Map<String, Boolean> indexState = new HashMap<String, Boolean>(); //index状态结合
 	private static final String SUCCESS = "success";
+	private static final String OPEN = "OPEN"; //索引打开状态
+	private static final String CLOSE = "CLOSE"; //索引关闭状态
 
 	@Autowired
 	private TransportClient client;
@@ -213,5 +237,213 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), ResultCodeEnum.ERROR.getMsg());
 		}
 	}
+
+	@Override
+	public Boolean delDocByIndexName(String indexName, String type, String id) {
+		Boolean existEsIndex = isExistEsIndex(indexName);
+		if (existEsIndex) {
+			client.prepareDelete(indexName, type, id).execute().actionGet();
+			logger.info("删除doc成功");
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean delIndexByIndexName(String indexName) {
+		Boolean existEsIndex = isExistEsIndex(indexName);
+		if (existEsIndex) {
+			DeleteIndexResponse deleteIndexResponse = client.admin().indices().prepareDelete(indexName).execute()
+					.actionGet();
+			boolean acknowledged = deleteIndexResponse.isAcknowledged();
+			return acknowledged;
+		} else {
+			return false;
+		}
+	}
+
+	@Override
+	public String[] getAllIndex() {
+		GetIndexResponse getIndexResponse = client.admin().indices().prepareGetIndex().execute().actionGet();
+		String[] indices = getIndexResponse.getIndices();
+		return indices;
+	}
+
+	@Override
+	public int getAllIndexCount() {
+		String[] allIndex = getAllIndex();
+		int length = allIndex.length;
+		return length;
+	}
+
+	@Override
+	public List<String> getTypesByIndexName(String indexName) {
+		List<String> list = new ArrayList<>();
+		GetMappingsResponse res = null;
+		try {
+			res = client.admin().indices().getMappings(new GetMappingsRequest().indices(indexName)).get();
+		} catch (InterruptedException | ExecutionException t) {
+			logger.error("获得type报错", t);
+		}
+		ImmutableOpenMap<String, MappingMetaData> map = res.getMappings().get(indexName);
+		for (ObjectObjectCursor<String, MappingMetaData> objectObjectCursor : map) {
+			list.add(objectObjectCursor.key);
+		}
+		return list;
+	}
+
+	@Override
+	public Set<String> getAllFieldsByIndexName(String indexName) {
+		Set<String> result = new HashSet<>();
+		SearchResponse searchResponse = client.prepareSearch(indexName).execute().actionGet();
+		SearchHits hits = searchResponse.getHits();
+		for (SearchHit searchHit : hits) {
+			Map<String, Object> map = searchHit.getSourceAsMap();
+			for (Map.Entry<String, Object> entry : map.entrySet()) {
+				result.add(entry.getKey());
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Set<String> getAllFieldsByIndexNameAndType(String indexName, String type) {
+		Set<String> result = new HashSet<>();
+		SearchResponse searchResponse = client.prepareSearch(indexName).setTypes(type).execute().actionGet();
+		SearchHits searchHits = searchResponse.getHits();
+		for (SearchHit searchHit : searchHits) {
+			Map<String, Object> map = searchHit.getSourceAsMap();
+			for (Map.Entry<String, Object> entry : map.entrySet()) {
+				result.add(entry.getKey());
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Map<String, Object> getDoc(String indexName, String type, String id) {
+		GetResponse getResponse = client.prepareGet(indexName, type, id).get();
+		Map<String, Object> map = getResponse.getSourceAsMap();
+		return map;
+	}
+
+	@Override
+	public SearchHits getAllDocs(String index, String type, String searchType, String input, int start, int size) {
+		return null;
+	}
+
+	@Override
+	public String getClusterName() {
+		ClusterHealthResponse clusterHealthResponse = client.admin().cluster().prepareHealth().get();
+		String clusterName = clusterHealthResponse.getClusterName();
+		return clusterName;
+	}
+
+	@Override
+	public String getEsClusterHealthStatus() {
+		String clusterHealthStatu = null;
+		ClusterHealthResponse response = client.admin().cluster().prepareHealth().get();
+		Map<String, ClusterIndexHealth> map = response.getIndices();
+		for (Map.Entry<String, ClusterIndexHealth> entry : map.entrySet()) {
+			ClusterIndexHealth clusterIndexHealth = entry.getValue();
+			ClusterHealthStatus status = clusterIndexHealth.getStatus();
+			clusterHealthStatu = status.toString();
+		}
+		return clusterHealthStatu;
+	}
+
+	@Override
+	public int getDataNodeCount() {
+		ClusterHealthResponse clusterHealthResponse = client.admin().cluster().prepareHealth().get();
+		int number = clusterHealthResponse.getNumberOfDataNodes();
+		return number;
+	}
+
+	@Override
+	public int getClusterNodeCount() {
+		ClusterHealthResponse clusterHealthResponse = client.admin().cluster().prepareHealth().get();
+		int number = clusterHealthResponse.getNumberOfNodes();
+		return number;
+	}
+
+	@Override
+	public Boolean isExistAlias(String aliasName) {
+        AliasesExistResponse aliasesExistResponse = client.admin().indices().prepareAliasesExist(aliasName).execute().actionGet();
+        boolean exists = aliasesExistResponse.isExists();
+		return exists;
+	}
+
+	@Override
+	public Boolean addAlias(String index, String aliasName) {
+         IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases().addAlias(index, aliasName).execute().actionGet();
+         Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
+		 return acknowledged;
+	}
+
+	@Override
+	public Boolean delAlias(String indexName,String aliasName) {
+		 IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases().removeAlias(indexName, aliasName).execute().actionGet();
+		 Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
+		 return acknowledged;
+	}
+
+	@Override
+	public Boolean checkEsIndexState(String indexName) {
+        if(!indexState.containsKey(indexName)||!indexState.get(indexName)){
+        	indexState.put(indexName, isExistEsIndex(indexName));
+        }
+		return indexState.get(indexName);
+	}
+	
+	@Override
+	public String checkIndexStatus(String indexName) {
+		ClusterState cs = client.admin().cluster().prepareState().setIndices(indexName).execute().actionGet().getState();
+		IndexMetaData md=  cs.getMetaData().index(indexName);
+		String state = md.getState().name();
+		return state;
+	}
+	
+	@Override
+	public Boolean closeIndexByIndexName(String indexName) {
+		String checkIndexStatus = checkIndexStatus(indexName);
+		if(checkIndexStatus.equals(OPEN)) {
+			CloseIndexResponse closeIndexResponse = client.admin().indices().prepareClose(indexName).execute().actionGet();
+			boolean acknowledged = closeIndexResponse.isAcknowledged();
+			return acknowledged;
+		}else {
+			logger.info("该索引已经关闭");
+            return false;			
+		}
+	}
+	
+	@Override
+	public Boolean openIndexByIndexName(String indexName) {
+		String checkIndexStatus = checkIndexStatus(indexName);
+		if(checkIndexStatus.equals(CLOSE)){
+			OpenIndexResponse openIndexResponse = client.admin().indices().prepareOpen(indexName).execute().actionGet();
+			Boolean acknowledged = openIndexResponse.isAcknowledged();
+			return acknowledged;
+		}else {
+			logger.info("该索引已经打开");
+			return false;
+		}
+	}
+	
+	@Override
+	public Boolean updateSettingsByIndex(String indexName, Settings settings) {
+		Boolean closeResult = closeIndexByIndexName(indexName);
+		if(closeResult){
+			UpdateSettingsResponse updateSettingsResponse = client.admin().indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
+			Boolean acknowledged = updateSettingsResponse.isAcknowledged();
+			openIndexByIndexName(indexName);
+			return acknowledged;
+		}else{
+			return false;
+		}
+	}
+
+	
+
 
 }
