@@ -330,6 +330,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 
 	@Override
 	public SearchHits getAllDocs(String index, String type, String searchType, String input, int start, int size) {
+		//TODO 有问题的方法
 		return null;
 	}
 

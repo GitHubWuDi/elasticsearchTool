@@ -2,15 +2,15 @@ package com.example.elasticsearch.util;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-
 import com.example.elasticsearch.util.page.QueryCondition;
-
 /**
  * @author wudi
  * @version 创建时间：2018年7月28日 下午4:48:34
@@ -67,6 +67,23 @@ public class ElasticSearchUtil {
 		}
 	}
 
+	/**
+	 * 完成对应的查询（must查询语句）
+	 * @param conditions
+	 * @return
+	 */
+	public static QueryBuilder toQueryBuilder(List<QueryCondition> conditions) 
+	{
+		BoolQueryBuilder query= QueryBuilders.boolQuery();//
+		for(QueryCondition con : conditions){
+			query= query.must(toQueryBuild(con));
+		}
+		return query;
+	}
+	
+	
+	
+	
 	/**
 	 * 查询语句
 	 * 
@@ -127,7 +144,6 @@ public class ElasticSearchUtil {
 		case Like:
 			query = QueryBuilders.wildcardQuery(con.getField(), "*" + con.getValue1() + "*");
 			break;
-
 		/// <summary>
 		/// like '%xx'
 		/// 不需要加配符号
@@ -142,28 +158,24 @@ public class ElasticSearchUtil {
 		case LikeBegin:
 			query = QueryBuilders.wildcardQuery(con.getField(), con.getValue1() + "*");
 			break;
-
 		/// <summary>
 		/// 大于
 		/// </summary>
 		case Gt:
 			query = QueryBuilders.rangeQuery(con.getField()).gt(con.getValue1());
 			break;
-
 		/// <summary>
 		/// 大于等于
 		/// </summary>
 		case Ge:
 			query = QueryBuilders.rangeQuery(con.getField()).gte(con.getValue1());
 			break;
-
 		/// <summary>
 		/// 小于等于
 		/// </summary>
 		case Le:
 			query = QueryBuilders.rangeQuery(con.getField()).lte(con.getValue1());
 			break;
-
 		/// <summary>
 		/// 小于
 		/// </summary>
@@ -175,31 +187,28 @@ public class ElasticSearchUtil {
 		/// 逻辑且
 		/// </summary>
 		case And:
-			QueryBuilder must1 = toQueryBuilder((QueryCondition) con.getValue1());
-			QueryBuilder must2 = toQueryBuilder((QueryCondition) con.getValue2());
+			QueryBuilder must1 = toQueryBuild((QueryCondition) con.getValue1());
+			QueryBuilder must2 = toQueryBuild((QueryCondition) con.getValue2());
 			query = QueryBuilders.boolQuery().must(must1).must(must2);
-
 			break;
-
 		/// <summary>
 		/// 逻辑或者
 		/// </summary>
 		case Or:
-			QueryBuilder queryBuilder1 = toQueryBuilder((QueryCondition) con.getValue1());
-			QueryBuilder queryBuilder2 = toQueryBuilder((QueryCondition) con.getValue2());
+			QueryBuilder queryBuilder1 = toQueryBuild((QueryCondition) con.getValue1());
+			QueryBuilder queryBuilder2 = toQueryBuild((QueryCondition) con.getValue2());
 
 			query = QueryBuilders.boolQuery().should(queryBuilder1).should(queryBuilder2);
 			break;
-
 		/// <summary>
 		/// 逻辑非
 		/// </summary>
 		case Not:
-			query = QueryBuilders.boolQuery().mustNot(toQueryBuilder((QueryCondition) con.getValue1()));
-
+			query = QueryBuilders.boolQuery().mustNot(toQueryBuild((QueryCondition) con.getValue1()));
 			break;
 
 		}
+		return query;
 	}
 
 }
