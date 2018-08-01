@@ -4,19 +4,22 @@ import java.util.Date;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
+import com.example.elasticsearch.model.PrimaryKey;
+
 /**
  * @author wudi
  * @version 创建时间：2018年7月22日 下午5:21:21
  * @ClassName BookVO
  * @Description book成员变量
  */
+@PrimaryKey(value="id")
 public class BookVO {
 
 	private String id; //id索引
 	private String title; // 标题
 	private String author; // 作者名称
 	private Integer word_count; // 字数
-	//@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private Date publish_date; // 出版日期
 	private Integer gt_word_count; //大于某个数
 	private Integer lt_word_count; //小于某个数
