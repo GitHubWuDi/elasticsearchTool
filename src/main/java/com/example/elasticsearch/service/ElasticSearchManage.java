@@ -5,8 +5,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+
 
 /**
 * @author wudi
@@ -179,16 +182,16 @@ public interface ElasticSearchManage {
 	public Map<String,Object> getDoc(String indexName, String type,String id);
 	
 	/**
-	 * 根据index，type，searchType，input进行查询
+	 * 根据index，type，queryBuilder进行查询
 	 * @param index
 	 * @param type
-	 * @param searchType
-	 * @param input
+	 * @param queryBuilder
+	 * @param sortBuilders
 	 * @param start
 	 * @param size
 	 * @return
 	 */
-	public SearchHits getAllDocs(String index, String type, String searchType, String input, int start, int size);
+	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder , int start, int size);
 	
 	/**
 	 * 获得集群名称

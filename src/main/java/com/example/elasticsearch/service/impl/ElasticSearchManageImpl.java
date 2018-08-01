@@ -28,6 +28,7 @@ import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRespons
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
@@ -40,8 +41,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -68,6 +72,10 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	private static final String SUCCESS = "success";
 	private static final String OPEN = "OPEN"; //索引打开状态
 	private static final String CLOSE = "CLOSE"; //索引关闭状态
+	private static final String ALL_COUNT = "all_count"; //查询所有的个数
+	private static final String ALL_DOC = "all_doc"; //查询所有的doc数
+	private static final String SELECT_COUNT = "select_count"; //条件选择查询个数
+	private static final String SELECT_DOC = "select_doc";//条件筛选查询个数
 
 	@Autowired
 	private TransportClient client;
@@ -329,9 +337,19 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	}
 
 	@Override
-	public SearchHits getAllDocs(String index, String type, String searchType, String input, int start, int size) {
-		//TODO 有问题的方法
-		return null;
+	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder , int start, int size) {
+		SearchResponse searchResponse = null;
+		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type);
+		//筛选条件
+		if(queryBuilder!=null){
+			searchRequestBuilder.setQuery(queryBuilder);
+		}
+		//排序
+		if(sortBuilder!=null){
+			searchRequestBuilder.addSort(sortBuilder);
+		}
+		searchResponse = searchRequestBuilder.setFrom(start).setSize(size).execute().actionGet();
+		return searchResponse;
 	}
 
 	@Override

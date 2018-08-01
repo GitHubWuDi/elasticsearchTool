@@ -3,12 +3,20 @@ package com.example.elasticsearch.service;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.sort.SortBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.elasticsearch.model.PrimaryKey;
+import com.example.elasticsearch.util.ElasticSearchUtil;
+import com.example.elasticsearch.util.page.QueryCondition;
 import com.google.gson.Gson;
 
 
@@ -111,4 +119,83 @@ public abstract class ElasticSearchService<T> {
 		}
 	}
 	
+	/**
+	 * 查找全部Doc
+	 * @return
+	 */
+	public List<T> findAll(){
+		String indexName = getIndexName();
+		String type = getType();
+		SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0, Integer.MAX_VALUE);
+		return null;
+	}
+	
+	/**
+	 * 查询对应index-type所有doc的个数
+	 * @return
+	 */
+	public long count(){
+		String indexName = getIndexName();
+		String type = getType();
+		SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0, 1);
+		long totalHits = searchResponse.getHits().getTotalHits();
+		return totalHits;
+	}
+	
+	/**
+	 * 筛选查询doc数
+	 * @param conditions
+	 * @return
+	 */
+	public List<T> findAll(List<QueryCondition> conditions){
+		String indexName = getIndexName();
+		String type = getType();
+		QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+		SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0, Integer.MAX_VALUE);
+		return null;
+	}
+	
+	/**
+	 * 根据筛选获得个数
+	 * @param conditions
+	 * @return
+	 */
+	public long count(List<QueryCondition> conditions){
+		String indexName = getIndexName();
+		String type = getType();
+		QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+		SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0, 1);
+		long totalHits = searchResponse.getHits().getTotalHits();
+		return totalHits;
+	}
+	
+	/**
+	 * 带排序字段的查询条件  默认正序
+	 */
+	public List<T> findAll(List<QueryCondition> conditions, String value) {
+		return findAll(conditions, value, "asc");
+	}
+	
+	/**
+	 * 根据排序进行查找
+	 * @param conditions
+	 * @param value
+	 * @param sort
+	 * @return
+	 */
+	public List<T> findAll(List<QueryCondition> conditions, String value,String sort){
+		String indexName = getIndexName();
+		String type = getType();
+		if(isEsIndexExist()&&checkESIndexState().equals("OPEN")){
+			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+			SortBuilder sortBuilder = null;
+			if ("asc".equalsIgnoreCase(sort)) {
+				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.ASC);
+			} else {
+				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
+			}
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder, 0, Integer.MAX_VALUE);
+		}
+		return null;
+	}
 }
