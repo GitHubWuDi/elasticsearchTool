@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -210,5 +211,8 @@ public class ElasticSearchUtil {
 		}
 		return query;
 	}
+	
+	
+	
 
 }
