@@ -6,19 +6,26 @@ import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.model.PrimaryKey;
 import com.example.elasticsearch.util.DateUtil;
+import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
+import com.example.elasticsearch.util.page.PageReq;
+import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.ElasticSearchVO;
+import com.example.elasticsearch.vo.SearchField;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -45,8 +52,7 @@ public abstract class ElasticSearchService<T> {
 	public ElasticSearchService() {
 		// 反射得到T的真实类型
 		ParameterizedType parameterizedType = (ParameterizedType) this.getClass().getGenericSuperclass(); // 获取当前new的对象的泛型的父类的类型
-		this.clazz = (Class<T>) parameterizedType.getActualTypeArguments()[0]; // 获取第一个类型参数的真实类型model =
-																				// clazz.newInstance();实例化需要的时候添加
+		this.clazz = (Class<T>) parameterizedType.getActualTypeArguments()[0]; // 获取第一个类型参数的真实类型model,clazz.newInstance();实例化需要的时候添加
 		this.idField = clazz.getAnnotation(PrimaryKey.class).value();
 	}
 
@@ -134,14 +140,15 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll() {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0, Integer.MAX_VALUE);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0,
+					Integer.MAX_VALUE);
 			List<T> list = getResultList(searchResponse);
 			return list;
-		}else {
-			return null;
+		} else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
 		}
 	}
 
@@ -151,14 +158,14 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public long count() {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
 			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0, 1);
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
-		}else {
-			return 0;
+		} else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
 		}
 	}
 
@@ -169,17 +176,17 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll(List<QueryCondition> conditions) {
-	if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
-		String indexName = getIndexName();
-		String type = getType();
-		QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
-		SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0,
-				Integer.MAX_VALUE);
-		List<T> list = getResultList(searchResponse);
-		return list;
-	 }else{
-		 return null;
-	 }
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
+			String indexName = getIndexName();
+			String type = getType();
+			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0,
+					Integer.MAX_VALUE);
+			List<T> list = getResultList(searchResponse);
+			return list;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
 	}
 
 	/**
@@ -189,15 +196,15 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public long count(List<QueryCondition> conditions) {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
 			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0, 1);
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
-		}else {
-			return 0;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
 		}
 	}
 
@@ -217,35 +224,115 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll(List<QueryCondition> conditions, String value, String sort) {
+		List<T> list = findAll(conditions, value, sort, 0, Integer.MAX_VALUE);
+		return list;
+	}
+
+	/**
+	 * 分页条件查询
+	 * 
+	 * @param conditions
+	 * @param value
+	 * @param sort
+	 * @param start
+	 * @param size
+	 * @return
+	 */
+	public List<T> findAll(List<QueryCondition> conditions, String value, String sort, Integer start, Integer size) {
 		String indexName = getIndexName();
 		String type = getType();
 		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
 			SortBuilder sortBuilder = null;
-			if ("asc".equalsIgnoreCase(sort)) {
-				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.ASC);
-			} else {
-				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
+			if (StringUtils.isNoneEmpty(value) && StringUtils.isNoneEmpty(sort)) {
+				if ("asc".equalsIgnoreCase(sort)) {
+					sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.ASC);
+				} else {
+					sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
+				}
 			}
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder, 0,
-					Integer.MAX_VALUE);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,
+					start, size);
 			List<T> list = getResultList(searchResponse);
 			return list;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
 		}
-		return null;
 	}
 
 	/**
 	 * ES获得数据格式化
+	 * 
 	 * @param searchResponse
 	 * @return
 	 */
 	private List<T> getResultList(SearchResponse searchResponse) {
-		Gson gson = new GsonBuilder()
-				        .setDateFormat(DateUtil.DEFAULT_DATE_PATTERN)
-				        .create();
-		ElasticSearchVO<T> elasticSearchVO = gson.fromJson(searchResponse.toString(), new TypeToken<ElasticSearchVO<T>>() {}.getType());
+		Gson gson = new GsonBuilder().setDateFormat(DateUtil.DEFAULT_DATE_PATTERN).create();
+		ElasticSearchVO<T> elasticSearchVO = gson.fromJson(searchResponse.toString(),
+				new TypeToken<ElasticSearchVO<T>>() {
+				}.getType());
 		List<T> list = elasticSearchVO.getList(clazz);
 		return list;
 	}
+
+	/**
+	 * 分页查询doc
+	 * 
+	 * @param pageReq
+	 * @param conditons
+	 * @return
+	 */
+	public PageRes<T> findByPage(PageReq pageReq, List<QueryCondition> conditions) {
+		String by_ = pageReq.getBy_();
+		Integer start_ = pageReq.getStart_();
+		Integer count_ = pageReq.getCount_();
+		String order_ = pageReq.getOrder_();
+		String indexName = getIndexName();
+		String type = getType();
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
+			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+			SortBuilder sortBuilder = null;
+			if (StringUtils.isNoneEmpty(by_) && StringUtils.isNoneEmpty(order_)) {
+				if ("asc".equalsIgnoreCase(order_)) {
+					sortBuilder = SortBuilders.fieldSort(by_).order(SortOrder.ASC);
+				} else {
+					sortBuilder = SortBuilders.fieldSort(by_).order(SortOrder.DESC);
+				}
+			}
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,
+					start_, count_);
+			
+			PageRes<T> paginationResponse = getPaginationResponse(searchResponse);
+			return paginationResponse;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
+	}
+	
+	/**
+	 * 获得分页数据（VAP数据类型分页）
+	 * @param searchResponse
+	 * @return
+	 */
+	private  PageRes<T> getPaginationResponse(SearchResponse searchResponse){
+		Gson gson = new GsonBuilder().setDateFormat(DateUtil.DEFAULT_DATE_PATTERN).create();
+		ElasticSearchVO<T> elasticSearchVO = gson.fromJson(searchResponse.toString(),
+				new TypeToken<ElasticSearchVO<T>>() {
+				}.getType());
+		PageRes<T> paginationResponse = elasticSearchVO.toPaginationResponse(clazz);
+		return paginationResponse;
+	}
+
+	/**
+	 * 复杂分组查询
+	 * @param conditions
+	 * @param field
+	 * @return
+	 */
+	public Map<String,Object> queryStatistics(List<QueryCondition> conditions, SearchField field){
+		
+		return null;
+		
+	}
+	
 }

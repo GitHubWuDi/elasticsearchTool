@@ -183,9 +183,9 @@ public class ElasticsearchManageTests {
 		String format = format(new Date());
 		String indexName = "books";
 		String type = "test";
-		String id = "1";
+		String id = "3";
 		Map<String, Object> map = new HashMap<>();
-		map.put("title", "test");
+		map.put("title", "Elasticsearch 入门");
 		map.put("author", "wudi");
 		map.put("word_count", 3000);
 		map.put("publish_date", format);

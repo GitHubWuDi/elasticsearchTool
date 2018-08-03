@@ -4,11 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.elasticsearch.util.DateUtil;
+import com.example.elasticsearch.util.page.PageRes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import lombok.Data;
 
+/**
+ * @author wudi
+ * @version 创建时间：2018年7月22日 下午5:21:21
+ * @ClassName ElasticSearchVO
+ * @Description ES数据查询结构化
+ */
 @Data
 public class ElasticSearchVO<T> {
      
@@ -19,15 +26,15 @@ public class ElasticSearchVO<T> {
 	
 	@Data
 	public class Shards{
-	       private int total; //总数
-	       private int successful; //成功数
-	       private int skipped; //跳过数
-	       private int failed;//失败数
+	       private long total; //总数
+	       private long successful; //成功数
+	       private long skipped; //跳过数
+	       private long failed;//失败数
 	}
 	
 	@Data
 	public static class Hits<T>{
-	     private int total; //总数
+	     private long total; //总数
 	     private float max_score; //分数
 	     private List<HitsChild<T>> hits; //总命中数
 	}
@@ -59,5 +66,18 @@ public class ElasticSearchVO<T> {
 		return list;
 	}
 	
+	/**
+	 * 分页数据结构化
+	 * @param clazz
+	 * @return
+	 */
+	public PageRes<T> toPaginationResponse(Class<T> clazz){
+		PageRes<T> findByPage = new PageRes<T>();
+		List<T> listResult =getList(clazz);
+		findByPage.setList(listResult);
+		long total = getHits().getTotal();
+		findByPage.setTotal(total);
+		return findByPage;
+	}
 	
 }
