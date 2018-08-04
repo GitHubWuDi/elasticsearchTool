@@ -45,7 +45,6 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortBuilder;
-import org.elasticsearch.search.sort.SortBuilders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -54,6 +53,7 @@ import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
+import com.example.elasticsearch.vo.EsDocVO;
 
 /**
  * @author wudi
@@ -72,10 +72,6 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	private static final String SUCCESS = "success";
 	private static final String OPEN = "OPEN"; //索引打开状态
 	private static final String CLOSE = "CLOSE"; //索引关闭状态
-	private static final String ALL_COUNT = "all_count"; //查询所有的个数
-	private static final String ALL_DOC = "all_doc"; //查询所有的doc数
-	private static final String SELECT_COUNT = "select_count"; //条件选择查询个数
-	private static final String SELECT_DOC = "select_doc";//条件筛选查询个数
 
 	@Autowired
 	private TransportClient client;
@@ -460,6 +456,19 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		}else{
 			return false;
 		}
+	}
+
+	@Override
+	public String bulkCreateDocs(String indexName, String type,List<EsDocVO> list) {
+        BulkRequestBuilder bulkRequest = client.prepareBulk();
+        for (EsDocVO esDocVO : list) {
+        	String idValue = esDocVO.getIdValue();
+        	Map<String, Object> map = esDocVO.getMap();
+        	bulkRequest.add(client.prepareIndex(indexName, type,idValue).setSource(map));
+		}
+        BulkResponse bulkResponse = bulkRequest.execute().actionGet();
+        String result = bulkResponse.toString();
+		return result;
 	}
 
 	

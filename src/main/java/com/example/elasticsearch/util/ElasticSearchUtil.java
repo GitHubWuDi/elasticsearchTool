@@ -1,17 +1,25 @@
 package com.example.elasticsearch.util;
 
+import java.beans.BeanInfo;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+
 import com.example.elasticsearch.util.page.QueryCondition;
+
 /**
  * @author wudi
  * @version 创建时间：2018年7月28日 下午4:48:34
@@ -70,21 +78,18 @@ public class ElasticSearchUtil {
 
 	/**
 	 * 完成对应的查询（must查询语句）
+	 * 
 	 * @param conditions
 	 * @return
 	 */
-	public static QueryBuilder toQueryBuilder(List<QueryCondition> conditions) 
-	{
-		BoolQueryBuilder query= QueryBuilders.boolQuery();//
-		for(QueryCondition con : conditions){
-			query= query.must(toQueryBuild(con));
+	public static QueryBuilder toQueryBuilder(List<QueryCondition> conditions) {
+		BoolQueryBuilder query = QueryBuilders.boolQuery();//
+		for (QueryCondition con : conditions) {
+			query = query.must(toQueryBuild(con));
 		}
 		return query;
 	}
-	
-	
-	
-	
+
 	/**
 	 * 查询语句
 	 * 
@@ -211,8 +216,45 @@ public class ElasticSearchUtil {
 		}
 		return query;
 	}
-	
-	
-	
+
+	/**
+	 * 将对应的实体转换成map数据结构
+	 * @param obj
+	 * @return
+	 */
+	public static Map<String, Object> transBean2Map(Object obj) {
+		if (obj == null) {
+			return null;
+		}
+		Map<String, Object> map = new HashMap<String, Object>();
+		try {
+			BeanInfo beanInfo = Introspector.getBeanInfo(obj.getClass());
+			PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
+			for (PropertyDescriptor property : propertyDescriptors) {
+				String key = property.getName();
+				// 过滤class属性
+				if (!key.equals("class")) {
+					// 得到property对应的getter方法
+					Method getter = property.getReadMethod();
+					String typeName = property.getPropertyType().getName();
+					Object value = getter.invoke(obj);
+					if (value != null) {// 过滤为null的数据
+
+						if (typeName.equals("java.util.Date")) {
+
+							map.put(key, DateUtil.format((Date) value));
+						} else {
+							map.put(key, value);
+						}
+
+					}
+				}
+			}
+		} catch (Exception e) {
+
+		}
+		return map;
+
+	}
 
 }

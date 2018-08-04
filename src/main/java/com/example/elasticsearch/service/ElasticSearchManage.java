@@ -10,6 +10,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 
+import com.example.elasticsearch.vo.EsDocVO;
+
 
 /**
 * @author wudi
@@ -274,5 +276,14 @@ public interface ElasticSearchManage {
 	 * @return
 	 */
 	public Boolean updateSettingsByIndex(String indexName, Settings settings);
+	
+	/**
+	 * 批量创建docs
+	 * @param indexName
+	 * @param type
+	 * @param map
+	 * @return
+	 */
+	public String bulkCreateDocs(String indexName, String type,List<EsDocVO> list);
 	
 }

@@ -73,6 +73,11 @@
 			<artifactId>spring-data-commons</artifactId>
 			<version>1.13.7.RELEASE</version>
 		</dependency>
+		<dependency>
+			<groupId>commons-beanutils</groupId>
+			<artifactId>commons-beanutils</artifactId>
+			<version>1.9.3</version>
+		</dependency>
 	</dependencies>
 
 	<build>

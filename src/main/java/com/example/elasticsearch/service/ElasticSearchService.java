@@ -3,14 +3,15 @@ package com.example.elasticsearch.service;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.reindex.ScrollableHitSource.SearchFailure;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -25,6 +26,7 @@ import com.example.elasticsearch.util.page.PageReq;
 import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.ElasticSearchVO;
+import com.example.elasticsearch.vo.EsDocVO;
 import com.example.elasticsearch.vo.SearchField;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -330,9 +332,112 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public Map<String,Object> queryStatistics(List<QueryCondition> conditions, SearchField field){
-		
+		//TODO 
 		return null;
 		
+	}
+	
+	/**
+	 * 获得doc的主键
+	 * @param entity
+	 * @return
+	 */
+	private String getIdValue(T entity) {
+		String idValue = null;
+		try {
+			idValue = BeanUtils.getProperty(entity, idField);
+		} catch (Exception  e) {
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "未配置的PrimaryKey依赖，请配置");
+		}
+		return idValue;
+	}
+	/**
+	 * 保存业务数据
+	 * @param entity
+	 * @return
+	 */
+	public Serializable save(T entity){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String indexName = getIndexName();
+			String type = getType();
+			String id = getIdValue(entity);
+			Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
+			String createDoc = elasticSearchManage.createDoc(indexName, type, id, map);
+			refreshIndex();
+			return createDoc;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
+		
+	}
+	
+	/**
+	 * 批量保存数据
+	 * @param entities
+	 */
+	public void addList(List<T> entities){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			List<EsDocVO> list = new ArrayList<>();
+			String indexName = getIndexName();
+			String type = getType();
+			for (T entity : entities) {
+				EsDocVO esDocVO = new EsDocVO();
+				String idValue = getIdValue(entity);
+				Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
+				esDocVO.setIdValue(idValue);
+				esDocVO.setMap(map);
+				list.add(esDocVO);
+			}
+			String bulkCreateDocs = elasticSearchManage.bulkCreateDocs(indexName, type, list);
+			refreshIndex();
+			logger.info("bulk Message info:"+bulkCreateDocs);
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
+	}
+	
+	/**
+	 * 根据id删除doc
+	 * @param id
+	 */
+	public void deleteById(Serializable id){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String indexName = getIndexName();
+			String type = getType();
+			Boolean result = elasticSearchManage.delDocByIndexName(indexName, type, id.toString());
+			logger.info("result:"+result);
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
+	}
+	
+	/**
+	 * 以实体删除doc
+	 * @param entity
+	 */
+	public void delete(T entity){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String idValue = getIdValue(entity);
+			deleteById(idValue);
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
+	}
+	
+	/**
+	 * 批量删除doc
+	 * @param entities
+	 */
+	public void deleteList(List<T> entities){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			for (T t : entities) {
+				String idValue = getIdValue(t);
+				deleteById(idValue);
+			}
+		refreshIndex();
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
 	}
 	
 }

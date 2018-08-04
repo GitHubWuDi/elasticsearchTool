@@ -2,7 +2,9 @@ package com.example.elasticsearch;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -154,5 +156,70 @@ public class ElasticsearchServiceTests {
 		Long total = pageRes.getTotal();
 	}
 	
+	/**
+	 * 保存doc
+	 */
+	@Test
+	public void saveDoc(){
+		BookVO bookVO = new BookVO();
+		bookVO.setAuthor("wudi");
+		bookVO.setPublish_date(new Date());
+		bookVO.setGt_word_count(1000);
+		bookVO.setLt_word_count(2000);
+		bookVO.setId("4");
+		bookVO.setTitle("elasticsearch学习");
+		bookVO.setWord_count(5000);
+		Serializable save = bookServiceTest.save(bookVO);
+		assertEquals("success", save.toString());
+	}
+	
+	/**
+	 * 批量保存docs
+	 */
+	@Test
+	public void bulkDocs(){
+		List<BookVO> list = new ArrayList<>();
+		for (int i = 5; i < 8; i++) {
+			BookVO bookVO = new BookVO();
+			bookVO.setAuthor("wudi");
+			bookVO.setPublish_date(new Date());
+			bookVO.setGt_word_count(1000);
+			bookVO.setLt_word_count(2000);
+			bookVO.setId(String.valueOf(i));
+			bookVO.setTitle("elasticsearch学习");
+			bookVO.setWord_count(5000);
+			list.add(bookVO);
+		}
+		bookServiceTest.addList(list);
+	}
+	
+	/**
+	 * 根据id删除doc
+	 */
+	@Test
+	public void deleteByIdTest(){
+		String id = "7";
+		bookServiceTest.deleteById(id);
+	}
+	
+	/**
+	 * 批量删除
+	 */
+	@Test
+	public void deleteListTest(){
+		List<BookVO> list = new ArrayList<>();
+		for (int i = 5; i < 7; i++) {
+			BookVO bookVO = new BookVO();
+			bookVO.setAuthor("wudi");
+			bookVO.setPublish_date(new Date());
+			bookVO.setGt_word_count(1000);
+			bookVO.setLt_word_count(2000);
+			bookVO.setId(String.valueOf(i));
+			bookVO.setTitle("elasticsearch学习");
+			bookVO.setWord_count(5000);
+			list.add(bookVO);
+		}
+		bookServiceTest.deleteList(list);
+	}
 	
 }
