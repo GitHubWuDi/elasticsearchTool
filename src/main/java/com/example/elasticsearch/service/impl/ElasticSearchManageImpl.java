@@ -30,6 +30,7 @@ import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
@@ -44,16 +45,23 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import com.example.elasticsearch.enums.FieldType;
 import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.EsDocVO;
+import com.example.elasticsearch.vo.SearchField;
 
 /**
  * @author wudi
@@ -68,10 +76,10 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	private static final String number_of_shards = "index.number_of_shards"; // 分区数
 	private static final String number_of_replicas = "index.number_of_replicas"; // 副本数
 	private static final String max_result_window = "index.max_result_window"; // 最大返回结果数
-	private static Map<String, Boolean> indexState = new HashMap<String, Boolean>(); //index状态结合
+	private static Map<String, Boolean> indexState = new HashMap<String, Boolean>(); // index状态结合
 	private static final String SUCCESS = "success";
-	private static final String OPEN = "OPEN"; //索引打开状态
-	private static final String CLOSE = "CLOSE"; //索引关闭状态
+	private static final String OPEN = "OPEN"; // 索引打开状态
+	private static final String CLOSE = "CLOSE"; // 索引关闭状态
 
 	@Autowired
 	private TransportClient client;
@@ -333,19 +341,100 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	}
 
 	@Override
-	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder , int start, int size) {
+	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder, SortBuilder sortBuilder,
+			SearchField field, int start, int size) {
 		SearchResponse searchResponse = null;
-		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type);
-		//筛选条件
-		if(queryBuilder!=null){
+		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		// 筛选条件
+		if (queryBuilder != null) {
 			searchRequestBuilder.setQuery(queryBuilder);
 		}
-		//排序
-		if(sortBuilder!=null){
+		// 排序
+		if (sortBuilder != null) {
 			searchRequestBuilder.addSort(sortBuilder);
+		}
+		// 聚合查询
+		if (field != null) {
+			AggregationBuilder aggregationsBuilder = getAggregationsBuilder(field);
+			searchRequestBuilder.addAggregation(aggregationsBuilder);
 		}
 		searchResponse = searchRequestBuilder.setFrom(start).setSize(size).execute().actionGet();
 		return searchResponse;
+	}
+
+	/**
+	 * 获得聚合属性
+	 * 
+	 * @param field
+	 * @return
+	 */
+	private AggregationBuilder getAggregationsBuilder(SearchField field) {
+		String fieldName = field.getFieldName(); // 属性名称
+		String aggsName = "aggs" + fieldName; // 聚合名称
+		FieldType fieldType = field.getFieldType(); // 属性类型
+		String timeFormat = field.getTimeFormat(); // 时间格式
+		long timeSpan = field.getTimeSpan(); // 时间间隔
+		List<SearchField> childrenField = field.getChildrenField(); // 子aggs
+		if (fieldType == FieldType.Date) {
+			AggregationBuilder dateAggregationBuilder = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
+			return dateAggregationBuilder;
+		} else {
+			AggregationBuilder termAggregationBuilder = getTermAggregationBuilder(fieldName, aggsName, childrenField);
+			return termAggregationBuilder;
+		}
+
+	}
+
+	/**
+	 * 一般属性分组
+	 * @param fieldName
+	 * @param aggsName
+	 * @param childrenField
+	 * @return
+	 */
+	private AggregationBuilder getTermAggregationBuilder(String fieldName, String aggsName,
+			List<SearchField> childrenField) {
+		TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms(aggsName).field(fieldName);
+		if (childrenField != null && childrenField.size() > 0) {
+			for (SearchField searchField : childrenField) {
+				if (searchField != null) {
+					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
+					termsAggregationBuilder.subAggregation(aggregationsBuilder);
+				}
+			}
+		}
+		return termsAggregationBuilder;
+	}
+
+	/**
+	 * 根据时间分组进行处理
+	 * @param fieldName
+	 * @param aggsName
+	 * @param timeFormat
+	 * @param timeSpan
+	 * @param childrenField
+	 * @return
+	 */
+	private AggregationBuilder getDateAggregationBuilder(String fieldName, String aggsName, String timeFormat,
+			long timeSpan, List<SearchField> childrenField) {
+		DateHistogramAggregationBuilder dateHistogramAggregationBuilder = null;
+		if (timeSpan > 0) {
+			dateHistogramAggregationBuilder = AggregationBuilders.dateHistogram(aggsName).field(fieldName)
+					.interval(timeSpan).format(timeFormat);
+		} else {
+			dateHistogramAggregationBuilder = AggregationBuilders.dateHistogram(aggsName).field(fieldName)
+					.format(timeFormat);
+		}
+
+		if (childrenField != null && childrenField.size() > 0) {
+			for (SearchField searchField : childrenField) {
+				if (searchField != null) {
+					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
+					dateHistogramAggregationBuilder.subAggregation(aggregationsBuilder);
+				}
+			}
+		}
+		return dateHistogramAggregationBuilder;
 	}
 
 	@Override
@@ -384,94 +473,97 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 
 	@Override
 	public Boolean isExistAlias(String aliasName) {
-        AliasesExistResponse aliasesExistResponse = client.admin().indices().prepareAliasesExist(aliasName).execute().actionGet();
-        boolean exists = aliasesExistResponse.isExists();
+		AliasesExistResponse aliasesExistResponse = client.admin().indices().prepareAliasesExist(aliasName).execute()
+				.actionGet();
+		boolean exists = aliasesExistResponse.isExists();
 		return exists;
 	}
 
 	@Override
 	public Boolean addAlias(String index, String aliasName) {
-         IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases().addAlias(index, aliasName).execute().actionGet();
-         Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
-		 return acknowledged;
+		IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases()
+				.addAlias(index, aliasName).execute().actionGet();
+		Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
+		return acknowledged;
 	}
 
 	@Override
-	public Boolean delAlias(String indexName,String aliasName) {
-		 IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases().removeAlias(indexName, aliasName).execute().actionGet();
-		 Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
-		 return acknowledged;
+	public Boolean delAlias(String indexName, String aliasName) {
+		IndicesAliasesResponse indicesAliasesResponse = client.admin().indices().prepareAliases()
+				.removeAlias(indexName, aliasName).execute().actionGet();
+		Boolean acknowledged = indicesAliasesResponse.isAcknowledged();
+		return acknowledged;
 	}
 
 	@Override
 	public Boolean checkEsIndexState(String indexName) {
-        if(!indexState.containsKey(indexName)||!indexState.get(indexName)){
-        	indexState.put(indexName, isExistEsIndex(indexName));
-        }
+		if (!indexState.containsKey(indexName) || !indexState.get(indexName)) {
+			indexState.put(indexName, isExistEsIndex(indexName));
+		}
 		return indexState.get(indexName);
 	}
-	
+
 	@Override
 	public String checkIndexStatus(String indexName) {
-		ClusterState cs = client.admin().cluster().prepareState().setIndices(indexName).execute().actionGet().getState();
-		IndexMetaData md=  cs.getMetaData().index(indexName);
+		ClusterState cs = client.admin().cluster().prepareState().setIndices(indexName).execute().actionGet()
+				.getState();
+		IndexMetaData md = cs.getMetaData().index(indexName);
 		String state = md.getState().name();
 		return state;
 	}
-	
+
 	@Override
 	public Boolean closeIndexByIndexName(String indexName) {
 		String checkIndexStatus = checkIndexStatus(indexName);
-		if(checkIndexStatus.equals(OPEN)) {
-			CloseIndexResponse closeIndexResponse = client.admin().indices().prepareClose(indexName).execute().actionGet();
+		if (checkIndexStatus.equals(OPEN)) {
+			CloseIndexResponse closeIndexResponse = client.admin().indices().prepareClose(indexName).execute()
+					.actionGet();
 			boolean acknowledged = closeIndexResponse.isAcknowledged();
 			return acknowledged;
-		}else {
+		} else {
 			logger.info("该索引已经关闭");
-            return false;			
+			return false;
 		}
 	}
-	
+
 	@Override
 	public Boolean openIndexByIndexName(String indexName) {
 		String checkIndexStatus = checkIndexStatus(indexName);
-		if(checkIndexStatus.equals(CLOSE)){
+		if (checkIndexStatus.equals(CLOSE)) {
 			OpenIndexResponse openIndexResponse = client.admin().indices().prepareOpen(indexName).execute().actionGet();
 			Boolean acknowledged = openIndexResponse.isAcknowledged();
 			return acknowledged;
-		}else {
+		} else {
 			logger.info("该索引已经打开");
 			return false;
 		}
 	}
-	
+
 	@Override
 	public Boolean updateSettingsByIndex(String indexName, Settings settings) {
 		Boolean closeResult = closeIndexByIndexName(indexName);
-		if(closeResult){
-			UpdateSettingsResponse updateSettingsResponse = client.admin().indices().prepareUpdateSettings(indexName).setSettings(settings).execute().actionGet();
+		if (closeResult) {
+			UpdateSettingsResponse updateSettingsResponse = client.admin().indices().prepareUpdateSettings(indexName)
+					.setSettings(settings).execute().actionGet();
 			Boolean acknowledged = updateSettingsResponse.isAcknowledged();
 			openIndexByIndexName(indexName);
 			return acknowledged;
-		}else{
+		} else {
 			return false;
 		}
 	}
 
 	@Override
-	public String bulkCreateDocs(String indexName, String type,List<EsDocVO> list) {
-        BulkRequestBuilder bulkRequest = client.prepareBulk();
-        for (EsDocVO esDocVO : list) {
-        	String idValue = esDocVO.getIdValue();
-        	Map<String, Object> map = esDocVO.getMap();
-        	bulkRequest.add(client.prepareIndex(indexName, type,idValue).setSource(map));
+	public String bulkCreateDocs(String indexName, String type, List<EsDocVO> list) {
+		BulkRequestBuilder bulkRequest = client.prepareBulk();
+		for (EsDocVO esDocVO : list) {
+			String idValue = esDocVO.getIdValue();
+			Map<String, Object> map = esDocVO.getMap();
+			bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(map));
 		}
-        BulkResponse bulkResponse = bulkRequest.execute().actionGet();
-        String result = bulkResponse.toString();
+		BulkResponse bulkResponse = bulkRequest.execute().actionGet();
+		String result = bulkResponse.toString();
 		return result;
 	}
-
-	
-
 
 }

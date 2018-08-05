@@ -6,6 +6,7 @@ import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -17,8 +18,11 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 
 import com.example.elasticsearch.util.page.QueryCondition;
+import com.example.elasticsearch.vo.SearchField;
 
 /**
  * @author wudi
@@ -255,6 +259,33 @@ public class ElasticSearchUtil {
 		}
 		return map;
 
+	}
+	
+	/**
+	 * 解析aggs对应的数据格式
+	 * @param field
+	 * @param aggregation
+	 * @return
+	 */
+	public static List<Map<String, Object>> getMultiBucketsMap(SearchField field,Aggregation aggregation) {
+		List<Map<String,Object>> result = new ArrayList<>();
+		List<? extends MultiBucketsAggregation.Bucket> buckets = ((MultiBucketsAggregation)aggregation).getBuckets();
+		 for(MultiBucketsAggregation.Bucket bucket : buckets) {
+				Map<String, Object>	maps =new HashMap<>();
+				maps.put(field.getFieldName(), bucket.getKeyAsString());//根节点元素提取
+				if(field.getChildrenField()!=null&&field.getChildrenField().size()>0) {
+					for(SearchField child : field.getChildrenField()) {
+						Aggregation childterms =bucket.getAggregations().get("aggs"+child.getFieldName());
+							List<Map<String, Object>> childResult =getMultiBucketsMap(child,childterms);//根节点的结果
+							maps.put(child.getFieldName(), childResult);
+							result.add(maps);
+					}
+				}else {
+					maps.put("doc_count", bucket.getDocCount());//根节点元素提取
+					result.add(maps);
+				}
+			}
+		return result;
 	}
 
 }

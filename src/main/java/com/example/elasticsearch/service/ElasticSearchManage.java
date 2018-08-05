@@ -11,6 +11,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 
 import com.example.elasticsearch.vo.EsDocVO;
+import com.example.elasticsearch.vo.SearchField;
 
 
 /**
@@ -193,7 +194,7 @@ public interface ElasticSearchManage {
 	 * @param size
 	 * @return
 	 */
-	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder , int start, int size);
+	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder ,SearchField field, int start, int size);
 	
 	/**
 	 * 获得集群名称

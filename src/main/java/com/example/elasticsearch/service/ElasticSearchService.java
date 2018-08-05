@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +13,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -145,7 +149,7 @@ public abstract class ElasticSearchService<T> {
 		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0,
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null,null, 0,
 					Integer.MAX_VALUE);
 			List<T> list = getResultList(searchResponse);
 			return list;
@@ -163,7 +167,7 @@ public abstract class ElasticSearchService<T> {
 		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null, 0, 1);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null,null, 0, 1);
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		} else{
@@ -182,7 +186,7 @@ public abstract class ElasticSearchService<T> {
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0,
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null,null, 0,
 					Integer.MAX_VALUE);
 			List<T> list = getResultList(searchResponse);
 			return list;
@@ -202,7 +206,7 @@ public abstract class ElasticSearchService<T> {
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, 0, 1);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null,null, 0, 1);
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		}else{
@@ -253,7 +257,7 @@ public abstract class ElasticSearchService<T> {
 					sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
 				}
 			}
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,null,
 					start, size);
 			List<T> list = getResultList(searchResponse);
 			return list;
@@ -301,7 +305,7 @@ public abstract class ElasticSearchService<T> {
 					sortBuilder = SortBuilders.fieldSort(by_).order(SortOrder.DESC);
 				}
 			}
-			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, sortBuilder,null,
 					start_, count_);
 			
 			PageRes<T> paginationResponse = getPaginationResponse(searchResponse);
@@ -326,16 +330,30 @@ public abstract class ElasticSearchService<T> {
 	}
 
 	/**
-	 * 复杂分组查询
+	 * 复杂分组查询(主要用于图表展示)
 	 * @param conditions
 	 * @param field
 	 * @return
 	 */
-	public Map<String,Object> queryStatistics(List<QueryCondition> conditions, SearchField field){
-		//TODO 
-		return null;
-		
+	public  List<Map<String, Object>> queryStatistics(List<QueryCondition> conditions, SearchField field){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String indexName = getIndexName();
+			String type = getType();
+			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, queryBuilder, null, field, 0, Integer.MAX_VALUE);
+			String fieldName = "aggs" +field.getFieldName();// 聚合名称
+			Aggregation aggregation = searchResponse.getAggregations().get(fieldName);
+			logger.info(aggregation);
+			List<Map<String,Object>> list = ElasticSearchUtil.getMultiBucketsMap(field, aggregation);
+			return list;
+		}else{
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+		}
 	}
+
+	
+	
+	
 	
 	/**
 	 * 获得doc的主键
