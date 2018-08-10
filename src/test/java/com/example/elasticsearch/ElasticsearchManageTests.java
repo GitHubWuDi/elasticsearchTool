@@ -43,9 +43,20 @@ public class ElasticsearchManageTests {
 	 */
 	@Test
 	public void isExistEsIndexTest() {
-		String index = "book";
+		String index = "books";
 		Boolean result = elasticSearchManage.isExistEsIndex(index);
 		assertEquals(true, result);
+	}
+	
+	/**
+	 * 判断指定索引的类型是否存在
+	 */
+	@Test
+	public void isExistTypeOfIndexTest(){
+		String indexName = "books";
+		String type = "test123";
+		Boolean actual = elasticSearchManage.isExistEsTypeOfIndex(indexName, type);
+		assertEquals(false, actual);
 	}
 
 	/**

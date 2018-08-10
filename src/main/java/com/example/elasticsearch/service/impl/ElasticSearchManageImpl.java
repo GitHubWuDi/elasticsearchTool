@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
+import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
 import org.elasticsearch.action.admin.indices.alias.exists.AliasesExistResponse;
@@ -19,6 +20,8 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.exists.types.TypesExistsRequest;
+import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
 import org.elasticsearch.action.admin.indices.get.GetIndexResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -90,6 +93,13 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		IndicesExistsResponse response = client.admin().indices().exists(request).actionGet();
 		boolean exists = response.isExists();
 		return exists;
+	}
+	
+	@Override
+	public Boolean isExistEsTypeOfIndex(String indexName, String type) {
+		TypesExistsResponse typesExistsResponse = client.admin().indices().typesExists(new TypesExistsRequest(new String[]{indexName}, type)).actionGet();
+		Boolean result = typesExistsResponse.isExists();
+		return result;
 	}
 
 	@Override
@@ -565,5 +575,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		String result = bulkResponse.toString();
 		return result;
 	}
+
+
 
 }

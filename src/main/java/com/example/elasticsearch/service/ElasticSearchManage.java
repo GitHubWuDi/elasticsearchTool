@@ -30,6 +30,14 @@ public interface ElasticSearchManage {
 	public Boolean isExistEsIndex(String index);
 	
 	/**
+	 * 判断指定索引的类型是否存在
+	 * @param indexName
+	 * @param type
+	 * @return
+	 */
+	public Boolean isExistEsTypeOfIndex(String indexName,String type);
+	
+	/**
 	 * 根据索引名称直接创建索引
 	 * Mapping当中没有数据
 	 * @param indexName
