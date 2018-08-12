@@ -26,6 +26,11 @@ public class ElasticSearchConfig {
 	@Value("${spring.data.elasticsearch.cluster-name}")
 	private String clusterName;
 	
+	public ElasticSearchConfig(String clusterNodes,String clusterName){
+		this.clusterNodes = clusterNodes;
+		this.clusterName = clusterName;
+	}
+	
 	@Bean
 	public TransportClient client() throws UnknownHostException{
 		Settings settings = Settings.builder().put("cluster.name",clusterName).build();
