@@ -9,7 +9,9 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInter
 import org.springframework.util.StringUtils;
 
 import com.example.elasticsearch.enums.FieldType;
+import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.util.DateUtil;
+import com.example.elasticsearch.util.ElasticSearchException;
 
 /**
  * @author wudi
@@ -47,6 +49,7 @@ public class SearchField {
 	 * @param child
 	 */
 	public SearchField(String name, FieldType type, SearchField child) {
+		checkChildFieldType(type, child);
 		this.setFieldName(name);
 		this.setFieldType(type);
 		if (type == FieldType.Date) {
@@ -61,6 +64,22 @@ public class SearchField {
 	}
     
 	/**
+	 * String,Object类型不能是count相关类型的子类型，否则抛出异常
+	 * @param type
+	 * @param child
+	 */
+	private  void checkChildFieldType(FieldType type, SearchField child){
+		if(child!=null){
+			if(type==FieldType.NumberAvg ||type==FieldType.NumberMax||type==FieldType.NumberMin||type==FieldType.NumberSum||type==FieldType.ObjectDistinctCount){
+				if(child.getFieldType()==FieldType.Date || child.getFieldType()==FieldType.String||child.getFieldType()==FieldType.Object){
+					throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "String,Object类型Field不能是count相关类型的子类型,请检查");
+				}
+			}
+		}
+	}
+	
+	
+	/**
 	 * 构造函数-2
 	 * @param name
 	 * @param type
@@ -69,6 +88,7 @@ public class SearchField {
 	 * @param child
 	 */
 	public SearchField(String name, FieldType type, String format, long span, SearchField child) {
+		checkChildFieldType(type, child);
 		this.setFieldName(name);
 		this.setFieldType(type);
 		this.setTimeFormat(format);
@@ -86,6 +106,7 @@ public class SearchField {
 	 */
 	public SearchField(String name, FieldType type, String format, DateHistogramInterval timeInterval,
 			SearchField child) {
+		checkChildFieldType(type, child);
 		this.setFieldName(name);
 		this.setFieldType(type);
 		this.setTimeFormat(format);
