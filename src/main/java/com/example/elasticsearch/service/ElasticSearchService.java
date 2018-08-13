@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,12 +13,11 @@ import org.apache.log4j.Logger;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.model.PrimaryKey;
@@ -48,6 +46,10 @@ public abstract class ElasticSearchService<T> {
 	private Gson gson = new Gson();
 	@Autowired
 	private ElasticSearchManage elasticSearchManage;
+	@Value("${es.shardCount}")
+	private int shardCount;   //分区数
+	@Value("${es.repliceCount}")
+	private int repliceCount; //副本书
 
 	protected Class<T> clazz;
 	protected String idField;
@@ -81,32 +83,18 @@ public abstract class ElasticSearchService<T> {
 	 * 
 	 * @return
 	 */
-	public Boolean isEsIndexExist() {
+	private Boolean isEsIndexExist() {
 		String indexName = getIndexName();
 		Boolean result = elasticSearchManage.checkEsIndexState(indexName);
 		return result;
 	}
-	
-	/**
-	 * 判断指定索引的类型是否存在
-	 * @param indexName
-	 * @param type
-	 * @return
-	 */
-	public Boolean isExistEsTypeOfIndex() {
-		String indexName = getIndexName();
-		String type = getType();
-		Boolean result = elasticSearchManage.isExistEsTypeOfIndex(indexName, type);
-		return result;
-	}
-	
 
 	/**
 	 * 检查索引状态（OPEN OR CLOSE）
 	 * 
 	 * @return
 	 */
-	public String checkESIndexState() {
+	private String checkESIndexState() {
 		String indexName = getIndexName();
 		String indexStatus = elasticSearchManage.checkIndexStatus(indexName);
 		return indexStatus;
@@ -160,7 +148,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll() {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN") && isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN") ) {
 			String indexName = getIndexName();
 			String type = getType();
 			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null,null, 0,
@@ -178,7 +166,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public long count() {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN") && isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN") ) {
 			String indexName = getIndexName();
 			String type = getType();
 			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null,null, 0, 1);
@@ -196,7 +184,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll(List<QueryCondition> conditions) {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
@@ -216,7 +204,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public long count(List<QueryCondition> conditions) {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
@@ -261,7 +249,7 @@ public abstract class ElasticSearchService<T> {
 	public List<T> findAll(List<QueryCondition> conditions, String value, String sort, Integer start, Integer size) {
 		String indexName = getIndexName();
 		String type = getType();
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
 			SortBuilder sortBuilder = null;
 			if (StringUtils.isNoneEmpty(value) && StringUtils.isNoneEmpty(sort)) {
@@ -309,7 +297,7 @@ public abstract class ElasticSearchService<T> {
 		String order_ = pageReq.getOrder_();
 		String indexName = getIndexName();
 		String type = getType();
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
 			SortBuilder sortBuilder = null;
 			if (StringUtils.isNoneEmpty(by_) && StringUtils.isNoneEmpty(order_)) {
@@ -350,7 +338,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public  List<Map<String, Object>> queryStatistics(List<QueryCondition> conditions, SearchField field){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
 			String indexName = getIndexName();
 			String type = getType();
 			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
@@ -389,18 +377,44 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public Serializable save(T entity){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
-			String indexName = getIndexName();
-			String type = getType();
-			String id = getIdValue(entity);
-			Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
-			String createDoc = elasticSearchManage.createDoc(indexName, type, id, map);
-			refreshIndex();
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String createDoc = savedoc(entity);
 			return createDoc;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			judgeIndexStatus();
+			String result = savedoc(entity);
+			return result;
 		}
-		
+	}
+
+	/**
+	 * 判断index的状态（包括是否存在和是否开启）,并进行相应操作
+	 */
+	private void judgeIndexStatus() {
+		if(isEsIndexExist()==false){
+			Boolean createIndex = createIndex(shardCount,repliceCount);
+			logger.info("索引创建状态结果："+createIndex);
+		}
+		if(!checkESIndexState().equals("OPEN")){
+			String indexName = getIndexName();
+			Boolean openIndexByIndexName = elasticSearchManage.openIndexByIndexName(indexName);
+			logger.info("索引开启状态结果："+openIndexByIndexName);
+		}
+	}
+
+	/**
+	 * 保存数据
+	 * @param entity
+	 * @return
+	 */
+	private String savedoc(T entity) {
+		String indexName = getIndexName();
+		String type = getType();
+		String id = getIdValue(entity);
+		Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
+		String createDoc = elasticSearchManage.createDoc(indexName, type, id, map);
+		refreshIndex();
+		return createDoc;
 	}
 	
 	/**
@@ -408,24 +422,33 @@ public abstract class ElasticSearchService<T> {
 	 * @param entities
 	 */
 	public void addList(List<T> entities){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
-			List<EsDocVO> list = new ArrayList<>();
-			String indexName = getIndexName();
-			String type = getType();
-			for (T entity : entities) {
-				EsDocVO esDocVO = new EsDocVO();
-				String idValue = getIdValue(entity);
-				Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
-				esDocVO.setIdValue(idValue);
-				esDocVO.setMap(map);
-				list.add(esDocVO);
-			}
-			String bulkCreateDocs = elasticSearchManage.bulkCreateDocs(indexName, type, list);
-			refreshIndex();
-			logger.info("bulk Message info:"+bulkCreateDocs);
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			bulkDoc(entities);
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			judgeIndexStatus();
+			bulkDoc(entities);
 		}
+	}
+
+	/**
+	 * 批量保存数据
+	 * @param entities
+	 */
+	private void bulkDoc(List<T> entities) {
+		List<EsDocVO> list = new ArrayList<>();
+		String indexName = getIndexName();
+		String type = getType();
+		for (T entity : entities) {
+			EsDocVO esDocVO = new EsDocVO();
+			String idValue = getIdValue(entity);
+			Map<String, Object> map = ElasticSearchUtil.transBean2Map(entity);
+			esDocVO.setIdValue(idValue);
+			esDocVO.setMap(map);
+			list.add(esDocVO);
+		}
+		String bulkCreateDocs = elasticSearchManage.bulkCreateDocs(indexName, type, list);
+		refreshIndex();
+		logger.info("bulk Message info:"+bulkCreateDocs);
 	}
 	
 	/**
@@ -433,7 +456,7 @@ public abstract class ElasticSearchService<T> {
 	 * @param id
 	 */
 	public void deleteById(Serializable id){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
 			String indexName = getIndexName();
 			String type = getType();
 			Boolean result = elasticSearchManage.delDocByIndexName(indexName, type, id.toString());
@@ -448,7 +471,7 @@ public abstract class ElasticSearchService<T> {
 	 * @param entity
 	 */
 	public void delete(T entity){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
 			String idValue = getIdValue(entity);
 			deleteById(idValue);
 		}else{
@@ -461,7 +484,7 @@ public abstract class ElasticSearchService<T> {
 	 * @param entities
 	 */
 	public void deleteList(List<T> entities){
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN")&& isExistEsTypeOfIndex()){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
 			for (T t : entities) {
 				String idValue = getIdValue(t);
 				deleteById(idValue);

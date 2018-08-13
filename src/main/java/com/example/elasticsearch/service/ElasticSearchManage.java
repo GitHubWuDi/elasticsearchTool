@@ -64,6 +64,7 @@ public interface ElasticSearchManage {
 	 */
 	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Field[] fileds);
 	
+	
 	/**
 	 * 刷新所有的索引
 	 * @return

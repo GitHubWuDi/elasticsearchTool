@@ -26,10 +26,11 @@ public class ElasticSearchConfig {
 	@Value("${spring.data.elasticsearch.cluster-name}")
 	private String clusterName;
 	
-	public ElasticSearchConfig(String clusterNodes,String clusterName){
-		this.clusterNodes = clusterNodes;
-		this.clusterName = clusterName;
-	}
+	//TODO 加入对应的项目中需要添加
+//	public ElasticSearchConfig(String clusterNodes,String clusterName){
+//		this.clusterNodes = clusterNodes;
+//		this.clusterName = clusterName;
+//	}
 	
 	@Bean
 	public TransportClient client() throws UnknownHostException{

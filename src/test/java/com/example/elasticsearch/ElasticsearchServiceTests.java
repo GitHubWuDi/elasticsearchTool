@@ -41,24 +41,6 @@ public class ElasticsearchServiceTests {
 	private BookServiceTest bookServiceTest;
 
 	/**
-	 * 索引是否存在
-	 */
-	@Test
-	public void isExistEsIndexTest() {
-		Boolean result = bookServiceTest.isEsIndexExist();
-		assertEquals(true, result);
-	}
-
-	/**
-	 * 索引状态是开启还是关闭
-	 */
-	@Test
-	public void checkESIndexStateTest(){
-		String checkESIndexState = bookServiceTest.checkESIndexState();
-		assertEquals("OPEN", checkESIndexState);
-	}
-	
-	/**
 	 * 刷新索引  
 	 */
 	@Test
@@ -182,7 +164,7 @@ public class ElasticsearchServiceTests {
 	@Test
 	public void bulkDocs(){
 		List<BookVO> list = new ArrayList<>();
-		for (int i = 5; i < 8; i++) {
+		for (int i = 0; i < 10; i++) {
 			BookVO bookVO = new BookVO();
 			bookVO.setAuthor("wudi");
 			bookVO.setPublish_date(new Date());

@@ -20,6 +20,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.vo.BookVO;
+import com.example.elasticsearch.vo.TestVO;
 
 /**
  * @author wudi
@@ -95,6 +96,7 @@ public class ElasticsearchManageTests {
 		Boolean result = elasticSearchManage.createEsIndex(indexName, mapping, shardCount, repliceCount, fields);
 		assertEquals(true, result);
 	}
+	
 
 	/**
 	 * 刷新所有索引测试

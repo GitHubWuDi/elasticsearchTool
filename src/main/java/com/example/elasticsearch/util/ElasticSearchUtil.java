@@ -60,6 +60,9 @@ public class ElasticSearchUtil {
 							.endObject();
 					break;
 				case "boolean":
+				case "java.lang.Boolean":
+					builder = builder.startObject(name).field("type", "boolean").endObject();
+					break;
 				case "long":
 				case "short":
 				case "byte":

@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
-import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
 import org.elasticsearch.action.admin.indices.alias.exists.AliasesExistResponse;
@@ -51,7 +50,6 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +77,8 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	private static final String number_of_shards = "index.number_of_shards"; // 分区数
 	private static final String number_of_replicas = "index.number_of_replicas"; // 副本数
 	private static final String max_result_window = "index.max_result_window"; // 最大返回结果数
-	private static Map<String, Boolean> indexState = new HashMap<String, Boolean>(); // index状态结合
+	private static Map<String, Boolean> indexExistState = new HashMap<String, Boolean>(); // index状态结合(是否存在)
+	private static Map<String,String> indexState = new HashMap<String,String>();  //index状态（索引状态）
 	private static final String SUCCESS = "success";
 	private static final String OPEN = "OPEN"; // 索引打开状态
 	private static final String CLOSE = "CLOSE"; // 索引关闭状态
@@ -135,9 +134,9 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 
 	@Override
 	public Boolean createEsIndex(String indexName, String mapping, int shardCount, int repliceCount, Field[] fileds) {
-		Boolean result = isExistEsIndex(indexName);
-		if (result) {
-			logger.info("索引已经存在，无法创建");
+		Boolean indexResult = isExistEsIndex(indexName);
+		if (indexResult) {
+			logger.info("索引和类型已经存在，无法创建");
 			return false;
 		} else {
 			XContentBuilder builder = ElasticSearchUtil.getXContentBuilder(fileds);
@@ -150,6 +149,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			return acknowledged;
 		}
 	}
+
 
 	@Override
 	public void refreshAllIndex() {
@@ -507,14 +507,26 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 
 	@Override
 	public Boolean checkEsIndexState(String indexName) {
-		if (!indexState.containsKey(indexName) || !indexState.get(indexName)) {
-			indexState.put(indexName, isExistEsIndex(indexName));
+		if (!indexExistState.containsKey(indexName) || !indexExistState.get(indexName)) {
+			indexExistState.put(indexName, isExistEsIndex(indexName));
 		}
-		return indexState.get(indexName);
+		return indexExistState.get(indexName);
 	}
 
 	@Override
 	public String checkIndexStatus(String indexName) {
+		if (!indexState.containsKey(indexName) || indexState.get(indexName)==null) {
+			indexState.put(indexName, isEsIndexOpen(indexName));
+		}
+		return indexState.get(indexName);
+	}
+
+	/**
+	 * ES索引是否开启
+	 * @param indexName
+	 * @return
+	 */
+	private String isEsIndexOpen(String indexName) {
 		ClusterState cs = client.admin().cluster().prepareState().setIndices(indexName).execute().actionGet()
 				.getState();
 		IndexMetaData md = cs.getMetaData().index(indexName);
