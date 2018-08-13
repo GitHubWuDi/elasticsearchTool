@@ -245,6 +245,7 @@ public class ElasticSearchUtil {
 
 	/**
 	 * 将对应的实体转换成map数据结构
+	 * 
 	 * @param obj
 	 * @return
 	 */
@@ -282,47 +283,59 @@ public class ElasticSearchUtil {
 		return map;
 
 	}
-	
+
 	/**
 	 * 解析aggs对应的数据格式
+	 * 
 	 * @param field
 	 * @param aggregation
 	 * @return
 	 */
-	public static List<Map<String, Object>> getMultiBucketsMap(SearchField field,Aggregation aggregation) {
-		List<Map<String,Object>> result = new ArrayList<>();
+	public static List<Map<String, Object>> getMultiBucketsMap(SearchField field, Aggregation aggregation) {
+		List<Map<String, Object>> result = new ArrayList<>();
 		switch (field.getFieldType()) {
 		case NumberSum:
 		case NumberAvg:
 		case NumberMax:
 		case NumberMin:
 		case ObjectDistinctCount:
-			String valueAsString = ((NumericMetricsAggregation.SingleValue)aggregation).getValueAsString();
-			Map<String, Object>	mapss =new HashMap<>();
-			mapss.put(field.getFieldName(), field.getFieldType().toString());//根节点元素提取
-			mapss.put("doc_count",valueAsString);//根节点元素提取
+			String valueAsString = ((NumericMetricsAggregation.SingleValue) aggregation).getValueAsString();
+			Map<String, Object> mapss = new HashMap<>();
+			mapss.put(field.getFieldName(), field.getFieldType().toString());// 根节点元素提取
+			mapss.put("doc_count", valueAsString);// 根节点元素提取
 			result.add(mapss);
 			break;
 		default:
-			List<? extends MultiBucketsAggregation.Bucket> buckets = ((MultiBucketsAggregation)aggregation).getBuckets();
-			 for(MultiBucketsAggregation.Bucket bucket : buckets) {
-					Map<String, Object>	maps =new HashMap<>();
-					maps.put(field.getFieldName(), bucket.getKeyAsString());//根节点元素提取
-					if(field.getChildrenField()!=null&&field.getChildrenField().size()>0) {
-						for(SearchField child : field.getChildrenField()) {
-							Aggregation childterms =bucket.getAggregations().get("aggs"+child.getFieldName());
-								List<Map<String, Object>> childResult =getMultiBucketsMap(child,childterms);//根节点的结果
-								maps.put(child.getFieldName(), childResult);
-								result.add(maps);
-						}
-					}else {
-						maps.put("doc_count", bucket.getDocCount());//根节点元素提取
-						result.add(maps);
-					}
-				}
-			 	break;
+			MultiBucketAggregation(field, aggregation, result);
+			break;
 		}
-		return  result;
+		return result;
+	}
+
+	/**
+	 * 分组递归
+	 * @param field
+	 * @param aggregation
+	 * @param result
+	 */
+	private static void MultiBucketAggregation(SearchField field, Aggregation aggregation,
+			List<Map<String, Object>> result) {
+		List<? extends MultiBucketsAggregation.Bucket> buckets = ((MultiBucketsAggregation) aggregation).getBuckets();
+		for (MultiBucketsAggregation.Bucket bucket : buckets) {
+			Map<String, Object> maps = new HashMap<>();
+			maps.put(field.getFieldName(), bucket.getKeyAsString());// 根节点元素提取
+			if (field.getChildrenField() != null && field.getChildrenField().size() > 0) {
+				for (SearchField child : field.getChildrenField()) {
+					Aggregation childterms = bucket.getAggregations().get("aggs" + child.getFieldName());
+					List<Map<String, Object>> childResult = getMultiBucketsMap(child, childterms);// 根节点的结果
+					maps.put(child.getFieldName(), childResult);
+					result.add(maps);
+				}
+			} else {
+				maps.put("doc_count", bucket.getDocCount());// 根节点元素提取
+				result.add(maps);
+			}
+		}
 	}
 
 }
