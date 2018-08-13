@@ -121,6 +121,7 @@ public abstract class ElasticSearchService<T> {
 		String type = getType();
 		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fields);
 		return result;
+		
 	}
 
 	/**

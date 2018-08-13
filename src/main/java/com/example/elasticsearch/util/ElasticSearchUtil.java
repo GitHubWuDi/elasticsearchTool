@@ -20,6 +20,13 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
+import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation.Bucket;
+import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
+import org.elasticsearch.search.aggregations.metrics.avg.Avg;
+import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
+import org.elasticsearch.search.aggregations.metrics.max.Max;
+import org.elasticsearch.search.aggregations.metrics.min.Min;
+import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.SearchField;
@@ -64,13 +71,25 @@ public class ElasticSearchUtil {
 					builder = builder.startObject(name).field("type", "boolean").endObject();
 					break;
 				case "long":
-				case "short":
-				case "byte":
-				case "double":
-				case "float":
-					builder = builder.startObject(name).field("type", typename).endObject();
+				case "java.lang.Long":
+					builder = builder.startObject(name).field("type", "long").endObject();
 					break;
-
+				case "byte":
+				case "java.lang.Byte":
+					builder = builder.startObject(name).field("type", "long").endObject();
+					break;
+				case "short":
+				case "java.lang.Short":
+					builder = builder.startObject(name).field("type", "short").endObject();
+					break;
+				case "double":
+				case "java.lang.Double":
+					builder = builder.startObject(name).field("type", "double").endObject();
+					break;
+				case "float":
+				case "java.lang.Float":
+					builder = builder.startObject(name).field("type", "float").endObject();
+					break;
 				default:
 					break;
 				}
@@ -272,23 +291,38 @@ public class ElasticSearchUtil {
 	 */
 	public static List<Map<String, Object>> getMultiBucketsMap(SearchField field,Aggregation aggregation) {
 		List<Map<String,Object>> result = new ArrayList<>();
-		List<? extends MultiBucketsAggregation.Bucket> buckets = ((MultiBucketsAggregation)aggregation).getBuckets();
-		 for(MultiBucketsAggregation.Bucket bucket : buckets) {
-				Map<String, Object>	maps =new HashMap<>();
-				maps.put(field.getFieldName(), bucket.getKeyAsString());//根节点元素提取
-				if(field.getChildrenField()!=null&&field.getChildrenField().size()>0) {
-					for(SearchField child : field.getChildrenField()) {
-						Aggregation childterms =bucket.getAggregations().get("aggs"+child.getFieldName());
-							List<Map<String, Object>> childResult =getMultiBucketsMap(child,childterms);//根节点的结果
-							maps.put(child.getFieldName(), childResult);
-							result.add(maps);
+		switch (field.getFieldType()) {
+		case NumberSum:
+		case NumberAvg:
+		case NumberMax:
+		case NumberMin:
+		case ObjectDistinctCount:
+			String valueAsString = ((NumericMetricsAggregation.SingleValue)aggregation).getValueAsString();
+			Map<String, Object>	mapss =new HashMap<>();
+			mapss.put(field.getFieldName(), field.getFieldType().toString());//根节点元素提取
+			mapss.put("doc_count",valueAsString);//根节点元素提取
+			result.add(mapss);
+			break;
+		default:
+			List<? extends MultiBucketsAggregation.Bucket> buckets = ((MultiBucketsAggregation)aggregation).getBuckets();
+			 for(MultiBucketsAggregation.Bucket bucket : buckets) {
+					Map<String, Object>	maps =new HashMap<>();
+					maps.put(field.getFieldName(), bucket.getKeyAsString());//根节点元素提取
+					if(field.getChildrenField()!=null&&field.getChildrenField().size()>0) {
+						for(SearchField child : field.getChildrenField()) {
+							Aggregation childterms =bucket.getAggregations().get("aggs"+child.getFieldName());
+								List<Map<String, Object>> childResult =getMultiBucketsMap(child,childterms);//根节点的结果
+								maps.put(child.getFieldName(), childResult);
+								result.add(maps);
+						}
+					}else {
+						maps.put("doc_count", bucket.getDocCount());//根节点元素提取
+						result.add(maps);
 					}
-				}else {
-					maps.put("doc_count", bucket.getDocCount());//根节点元素提取
-					result.add(maps);
 				}
-			}
-		return result;
+			 	break;
+		}
+		return  result;
 	}
 
 }

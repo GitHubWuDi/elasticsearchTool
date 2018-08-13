@@ -35,6 +35,8 @@
      ```java
      spring.data.elasticsearch.cluster-nodes: 192.168.199.139:9300
      spring.data.elasticsearch.cluster-name: elasticsearch-cluster
+     es.shardCount: 5
+     es.repliceCount: 1
      ````    
 - (3) 新建类ElasticSearchConfiguration的bean的注入
 

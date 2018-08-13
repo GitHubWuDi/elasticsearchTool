@@ -51,6 +51,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.sum.SumAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -385,36 +386,67 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		String timeFormat = field.getTimeFormat(); // 时间格式
 		long timeSpan = field.getTimeSpan(); // 时间间隔
 		List<SearchField> childrenField = field.getChildrenField(); // 子aggs
-		if (fieldType == FieldType.Date) {
-			AggregationBuilder dateAggregationBuilder = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
-			return dateAggregationBuilder;
-		} else {
-			AggregationBuilder termAggregationBuilder = getTermAggregationBuilder(fieldName, aggsName, childrenField);
-			return termAggregationBuilder;
+		AggregationBuilder aggregation = null;
+		switch (fieldType) {
+		case Date:
+			aggregation = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
+		case String:
+		case Object:
+			aggregation = AggregationBuilders.terms(aggsName).field(fieldName);
+			break;
+		case NumberSum:
+			aggregation = AggregationBuilders.sum(aggsName).field(fieldName);
+		case NumberAvg:
+			aggregation = AggregationBuilders.avg(aggsName).field(fieldName);
+		case NumberMax:
+			aggregation = AggregationBuilders.max(aggsName).field(fieldName);
+			break;
+		case NumberMin:
+			aggregation = AggregationBuilders.min(aggsName).field(fieldName);
+			break;
+		case ObjectDistinctCount:
+			aggregation = AggregationBuilders.cardinality(aggsName).field(fieldName);
 		}
-
-	}
-
-	/**
-	 * 一般属性分组
-	 * @param fieldName
-	 * @param aggsName
-	 * @param childrenField
-	 * @return
-	 */
-	private AggregationBuilder getTermAggregationBuilder(String fieldName, String aggsName,
-			List<SearchField> childrenField) {
-		TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms(aggsName).field(fieldName);
+		
 		if (childrenField != null && childrenField.size() > 0) {
 			for (SearchField searchField : childrenField) {
 				if (searchField != null) {
 					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
-					termsAggregationBuilder.subAggregation(aggregationsBuilder);
+					aggregation.subAggregation(aggregationsBuilder);
 				}
 			}
 		}
-		return termsAggregationBuilder;
+		return aggregation;
+//		if (fieldType == FieldType.Date) {
+//			AggregationBuilder dateAggregationBuilder = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
+//			return dateAggregationBuilder;
+//		} else {
+//			AggregationBuilder termAggregationBuilder = getTermAggregationBuilder(fieldName, aggsName, childrenField);
+//			return termAggregationBuilder;
+//		}
+
 	}
+
+//	/**
+//	 * 一般属性分组
+//	 * @param fieldName
+//	 * @param aggsName
+//	 * @param childrenField
+//	 * @return
+//	 */
+//	private AggregationBuilder getTermAggregationBuilder(String fieldName, String aggsName,
+//			List<SearchField> childrenField) {
+//		TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms(aggsName).field(fieldName);
+//		if (childrenField != null && childrenField.size() > 0) {
+//			for (SearchField searchField : childrenField) {
+//				if (searchField != null) {
+//					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
+//					termsAggregationBuilder.subAggregation(aggregationsBuilder);
+//				}
+//			}
+//		}
+//		return termsAggregationBuilder;
+//	}
 
 	/**
 	 * 根据时间分组进行处理
@@ -434,15 +466,6 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		} else {
 			dateHistogramAggregationBuilder = AggregationBuilders.dateHistogram(aggsName).field(fieldName)
 					.format(timeFormat);
-		}
-
-		if (childrenField != null && childrenField.size() > 0) {
-			for (SearchField searchField : childrenField) {
-				if (searchField != null) {
-					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
-					dateHistogramAggregationBuilder.subAggregation(aggregationsBuilder);
-				}
-			}
 		}
 		return dateHistogramAggregationBuilder;
 	}
