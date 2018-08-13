@@ -6,6 +6,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import com.example.elasticsearch.model.PrimaryKey;
 
+import lombok.Data;
+
 /**
  * @author wudi
  * @version 创建时间：2018年7月22日 下午5:21:21
