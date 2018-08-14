@@ -209,11 +209,11 @@ public class ElasticsearchServiceTests {
 	
 	@Test
 	public void queryStatisticsTest(){
-		SearchField lastField = new SearchField("word_count", FieldType.ObjectDistinctCount, null);
-		SearchField childField = new SearchField("author", FieldType.String, lastField);
+		SearchField lastField = new SearchField("word_count", FieldType.Numberstat, null);
+		//SearchField childField = new SearchField("author", FieldType.String, lastField);
 		//SearchField searchField = new SearchField("publish_date", FieldType.Date, "yyyy-MM-dd", 24*60*60*1000, childField);
 		List<QueryCondition> conditions = new ArrayList<>();
-		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, childField);
+		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, lastField);
 		logger.info(list.size());
 	}
 }

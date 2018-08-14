@@ -404,8 +404,12 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		case NumberMin:
 			aggregation = AggregationBuilders.min(aggsName).field(fieldName);
 			break;
+		case Numberstat:
+			aggregation = AggregationBuilders.stats(aggsName).field(fieldName);
+			break;
 		case ObjectDistinctCount:
 			aggregation = AggregationBuilders.cardinality(aggsName).field(fieldName);
+			break;
 		}
 		
 		if (childrenField != null && childrenField.size() > 0) {
@@ -417,36 +421,8 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			}
 		}
 		return aggregation;
-//		if (fieldType == FieldType.Date) {
-//			AggregationBuilder dateAggregationBuilder = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
-//			return dateAggregationBuilder;
-//		} else {
-//			AggregationBuilder termAggregationBuilder = getTermAggregationBuilder(fieldName, aggsName, childrenField);
-//			return termAggregationBuilder;
-//		}
-
 	}
 
-//	/**
-//	 * 一般属性分组
-//	 * @param fieldName
-//	 * @param aggsName
-//	 * @param childrenField
-//	 * @return
-//	 */
-//	private AggregationBuilder getTermAggregationBuilder(String fieldName, String aggsName,
-//			List<SearchField> childrenField) {
-//		TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms(aggsName).field(fieldName);
-//		if (childrenField != null && childrenField.size() > 0) {
-//			for (SearchField searchField : childrenField) {
-//				if (searchField != null) {
-//					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
-//					termsAggregationBuilder.subAggregation(aggregationsBuilder);
-//				}
-//			}
-//		}
-//		return termsAggregationBuilder;
-//	}
 
 	/**
 	 * 根据时间分组进行处理

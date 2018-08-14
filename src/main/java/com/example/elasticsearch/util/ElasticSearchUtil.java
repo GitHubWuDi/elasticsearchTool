@@ -27,6 +27,7 @@ import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.max.Max;
 import org.elasticsearch.search.aggregations.metrics.min.Min;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
+import org.elasticsearch.search.aggregations.metrics.stats.Stats;
 
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.SearchField;
@@ -39,6 +40,7 @@ import com.example.elasticsearch.vo.SearchField;
  */
 public class ElasticSearchUtil {
 
+	private static final Aggregation Stats = null;
 	private static Logger logger = Logger.getLogger(ElasticSearchUtil.class);
 
 	/**
@@ -304,6 +306,22 @@ public class ElasticSearchUtil {
 			mapss.put(field.getFieldName(), field.getFieldType().toString());// 根节点元素提取
 			mapss.put("doc_count", valueAsString);// 根节点元素提取
 			result.add(mapss);
+			break;
+		case Numberstat:
+			Stats stats = (Stats)aggregation;
+			Map<String, Object> mapstats = new HashMap<>();
+			double avg = stats.getAvg();
+			long count = stats.getCount();
+			double max = stats.getMax();
+			double min = stats.getMin();
+			double sum = stats.getSum();
+			mapstats.put(field.getFieldName(), field.getFieldType().toString());
+			mapstats.put("avg", avg);
+			mapstats.put("count", count);
+			mapstats.put("max", max);
+			mapstats.put("min", min);
+			mapstats.put("sum", sum);
+			result.add(mapstats);
 			break;
 		default:
 			MultiBucketAggregation(field, aggregation, result);
