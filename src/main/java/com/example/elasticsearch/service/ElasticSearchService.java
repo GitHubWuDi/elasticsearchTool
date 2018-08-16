@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -103,11 +104,11 @@ public abstract class ElasticSearchService<T> {
 	/**
 	 * 刷新索引
 	 */
-	public void refreshIndex() {
+	private void refreshIndex() {
 		String indexName = getIndexName();
 		elasticSearchManage.refreshIndexByIndexName(indexName);
 	}
-
+	
 	/**
 	 * 创建索引
 	 * 
@@ -115,16 +116,44 @@ public abstract class ElasticSearchService<T> {
 	 * @param repliceCount
 	 * @return
 	 */
-	public Boolean createIndex(int shardCount, int repliceCount) {
-		Field[] fields = clazz.getDeclaredFields();
+	private Boolean createIndex(int shardCount, int repliceCount,T entity) {
+		Map<String, Class<?>> fieldsConvertMap = getFieldConvertMap(entity);
 		String indexName = getIndexName();
 		String type = getType();
-		Map<String, Class<?>> fieldsConvertMap = ElasticSearchUtil.fieldsConvertMap(fields);
-		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fieldsConvertMap);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount,fieldsConvertMap);
 		return result;
-		
 	}
 
+	/**
+	 * 将Field转换成Map<String, Class<?>>（特殊的数据map）
+	 * @param entity
+	 * @return
+	 */
+	private Map<String, Class<?>> getFieldConvertMap(T entity) {
+		Map<String, Class<?>> fieldsConvertMap=new HashMap<>();
+		Field[] fields = entity.getClass().getDeclaredFields();
+		for (Field field : fields) {
+	        field.setAccessible(true);
+	        String name = field.getName(); //获得属性
+			String typeName = field.getType().getName(); //获得typeName
+			try{
+			switch (typeName) {
+			case "java.util.Map":
+		        //获取属性值
+		        Map<String,Object> value = (Map<String,Object>)field.get(entity);
+		        Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(value,name);
+		        fieldsConvertMap.putAll(fieldMap);
+				break;
+			default:
+				fieldsConvertMap.put(name, field.getType());
+				break;
+			}
+			}catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return fieldsConvertMap;
+	}
 	/**
 	 * 根据id获得对应的doc
 	 * 
@@ -150,7 +179,7 @@ public abstract class ElasticSearchService<T> {
 	 * @return
 	 */
 	public List<T> findAll() {
-		if (isEsIndexExist() && checkESIndexState().equals("OPEN") ) {
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")) {
 			String indexName = getIndexName();
 			String type = getType();
 			SearchResponse searchResponse = elasticSearchManage.getDocs(indexName, type, null, null,null, 0,
@@ -161,6 +190,8 @@ public abstract class ElasticSearchService<T> {
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
 		}
 	}
+	
+	
 
 	/**
 	 * 查询对应index-type所有doc的个数
@@ -383,7 +414,7 @@ public abstract class ElasticSearchService<T> {
 			String createDoc = savedoc(entity);
 			return createDoc;
 		}else{
-			judgeIndexStatus();
+			judgeIndexStatus(entity);
 			String result = savedoc(entity);
 			return result;
 		}
@@ -392,9 +423,9 @@ public abstract class ElasticSearchService<T> {
 	/**
 	 * 判断index的状态（包括是否存在和是否开启）,并进行相应操作
 	 */
-	private void judgeIndexStatus() {
+	private void judgeIndexStatus(T entity) {
 		if(isEsIndexExist()==false){
-			Boolean createIndex = createIndex(shardCount,repliceCount);
+			Boolean createIndex = createIndex(shardCount,repliceCount,entity);
 			logger.info("索引创建状态结果："+createIndex);
 		}
 		if(!checkESIndexState().equals("OPEN")){
@@ -427,8 +458,11 @@ public abstract class ElasticSearchService<T> {
 		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
 			bulkDoc(entities);
 		}else{
-			judgeIndexStatus();
-			bulkDoc(entities);
+			if(entities.size()>0){
+				judgeIndexStatus(entities.get(0));
+				bulkDoc(entities);
+				
+			}
 		}
 	}
 

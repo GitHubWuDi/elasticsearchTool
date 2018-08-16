@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,11 +17,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.example.elasticsearch.enums.FieldType;
+import com.example.elasticsearch.service.ElasticSearchMapManage;
 import com.example.elasticsearch.service.test.BookServiceTest;
 import com.example.elasticsearch.util.page.PageReq;
 import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.BookVO;
+import com.example.elasticsearch.vo.PersonVO;
 import com.example.elasticsearch.vo.SearchField;
 
 /**
@@ -39,25 +42,16 @@ public class ElasticsearchServiceTests {
 
 	@Autowired
 	private BookServiceTest bookServiceTest;
-
-	/**
-	 * 刷新索引  
-	 */
-	@Test
-	public void refreshIndexTest(){
-		bookServiceTest.refreshIndex();
-		assertEquals(true,true);
-	}
 	
-	/**
-	 *创建索引
-	 */
+	@Autowired
+	private ElasticSearchMapManage elasticSearchMapManage;
+
+	
 	@Test
-	public void createIndexTest(){
-		int shardCount =5;
-		int repliceCount =1;
-		Boolean result = bookServiceTest.createIndex(shardCount, repliceCount);
-		assertEquals(true,result);
+	public void testElasticSearchMap(){
+		List<Map<String,Object>> list = elasticSearchMapManage.findAll("books", "test");
+		int size = list.size();
+		logger.info(size);
 	}
 	
 	/**
@@ -140,7 +134,7 @@ public class ElasticsearchServiceTests {
 		PageRes<BookVO> pageRes = bookServiceTest.findByPage(pageReq, conditions);
 		Long total = pageRes.getTotal();
 	}
-	
+   
 	/**
 	 * 保存doc
 	 */
@@ -151,11 +145,22 @@ public class ElasticsearchServiceTests {
 		bookVO.setPublish_date(new Date());
 		bookVO.setGt_word_count(1000);
 		bookVO.setLt_word_count(2000);
-		bookVO.setId("4");
+		bookVO.setId("5");
 		bookVO.setTitle("elasticsearch学习");
 		bookVO.setWord_count(5000);
+		PersonVO personVO = new PersonVO();
+		personVO.setAge(10);
+		personVO.setName("wudi");
+		bookVO.setPersonVO(personVO);
+		Map<String,Object> map = new HashMap<>();
+		map.put("name", "wudi");
+		Map<String,Object> childrenMap = new HashMap<>();
+		childrenMap.put("name", "wudi");
+		childrenMap.put("age", 10);
+		map.put("children", childrenMap);
+		bookVO.setMapVO(map);
 		Serializable save = bookServiceTest.save(bookVO);
-		assertEquals("success", save.toString());
+		assertEquals("success", save);
 	}
 	
 	/**
@@ -173,6 +178,10 @@ public class ElasticsearchServiceTests {
 			bookVO.setId(String.valueOf(i));
 			bookVO.setTitle("elasticsearch学习");
 			bookVO.setWord_count(5000);
+			PersonVO personVO = new PersonVO();
+			personVO.setAge(10);
+			personVO.setName("wudi");
+			bookVO.setPersonVO(personVO);
 			list.add(bookVO);
 		}
 		bookServiceTest.addList(list);
@@ -209,11 +218,11 @@ public class ElasticsearchServiceTests {
 	
 	@Test
 	public void queryStatisticsTest(){
-		SearchField lastField = new SearchField("word_count", FieldType.Numberstat, null);
-		//SearchField childField = new SearchField("author", FieldType.String, lastField);
+		SearchField lastField = new SearchField("word_count", FieldType.ObjectDistinctCount, null);
+		SearchField childField = new SearchField("author", FieldType.String, lastField);
 		//SearchField searchField = new SearchField("publish_date", FieldType.Date, "yyyy-MM-dd", 24*60*60*1000, childField);
 		List<QueryCondition> conditions = new ArrayList<>();
-		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, lastField);
+		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, childField);
 		logger.info(list.size());
 	}
 }

@@ -1,12 +1,11 @@
 package com.example.elasticsearch.vo;
 
 import java.util.Date;
+import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
 import com.example.elasticsearch.model.PrimaryKey;
-
-import lombok.Data;
 
 /**
  * @author wudi
@@ -25,6 +24,8 @@ public class BookVO {
 	private Date publish_date; // 出版日期
 	private Integer gt_word_count; //大于某个数
 	private Integer lt_word_count; //小于某个数
+	private PersonVO personVO;
+	private Map<String,Object> mapVO;
 	
 	public String getTitle() {
 		return title;
@@ -82,5 +83,22 @@ public class BookVO {
 		this.lt_word_count = lt_word_count;
 	}
 
+	public PersonVO getPersonVO() {
+		return personVO;
+	}
+
+	public void setPersonVO(PersonVO personVO) {
+		this.personVO = personVO;
+	}
+
+	public Map<String, Object> getMapVO() {
+		return mapVO;
+	}
+
+	public void setMapVO(Map<String, Object> mapVO) {
+		this.mapVO = mapVO;
+	}
+
+	
 	
 }

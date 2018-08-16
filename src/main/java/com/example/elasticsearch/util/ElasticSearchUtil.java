@@ -140,6 +140,36 @@ public class ElasticSearchUtil {
 		return query;
 	}
 
+	
+	
+	/**
+	 * 获得Map<String,Class<?>>
+	 * @param map
+	 * @return
+	 */
+	public static  Map<String,Class<?>> getFieldMap(Map<String, Object> map,String rootName) {
+		Map<String,Class<?>> field = new HashMap<>();
+		for (Map.Entry<String,Object> entry : map.entrySet()){
+			String key = entry.getKey();
+			if(!StringUtils.isEmpty(rootName)) {
+				key=rootName+"."+key;
+			}
+			Object value = entry.getValue();
+			String name = entry.getValue().getClass().getName();
+			switch (name) {
+			case "java.util.Map":
+			case "java.util.HashMap":
+				Map<String,Object> maps = (Map<String,Object>)value;
+				field.putAll(getFieldMap(maps, key));
+				break;
+			default:
+				Class<? extends Object> fieldClass = entry.getValue().getClass();
+				field.put(key, fieldClass);
+				break;
+			}
+		}
+		return field;
+	}
 	/**
 	 * 查询语句
 	 * 
