@@ -1,7 +1,6 @@
 package com.example.elasticsearch.service.impl;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,8 +49,6 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.sum.SumAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,6 +61,8 @@ import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.EsDocVO;
 import com.example.elasticsearch.vo.SearchField;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 /**
  * @author wudi
@@ -134,13 +133,13 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	}
 
 	@Override
-	public Boolean createEsIndex(String indexName, String mapping, int shardCount, int repliceCount, Field[] fileds) {
+	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Map<String,Class<?>> fields) {
 		Boolean indexResult = isExistEsIndex(indexName);
 		if (indexResult) {
 			logger.info("索引和类型已经存在，无法创建");
 			return false;
 		} else {
-			XContentBuilder builder = ElasticSearchUtil.getXContentBuilder(fileds);
+			XContentBuilder builder = ElasticSearchUtil.getXContentBuilder(fields);
 			Builder settings = Settings.builder().put(number_of_shards, shardCount)
 					.put(number_of_replicas, repliceCount).put(max_result_window, Integer.MAX_VALUE);
 			CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName)
@@ -241,11 +240,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		try {
 			BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
 			XContentBuilder xContentBuilder = XContentFactory.jsonBuilder().startObject();
-			for (Map.Entry<String, Object> entry : field.entrySet()) {
-				String key = entry.getKey();
-				Object value = entry.getValue();
-				xContentBuilder.field(key, value);
-			}
+			getXcontentBuilder(field, xContentBuilder);
 			xContentBuilder.endObject();
 			bulkRequestBuilder.add(client.prepareIndex(indexName, type, id).setSource(xContentBuilder));
 			BulkResponse bulkResponse = bulkRequestBuilder.get();
@@ -258,6 +253,50 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		} catch (IOException e) {
 			logger.error("创建doc报错", e);
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), ResultCodeEnum.ERROR.getMsg());
+		}
+	}
+	
+	/**
+	 * XcontentBuilder对应方法的修改
+	 * @param field
+	 * @param xContentBuilder
+	 * @throws IOException
+	 */
+	private void getXcontentBuilder(Map<String, Object> field,
+			XContentBuilder xContentBuilder) throws IOException {
+		for (Map.Entry<String, Object> entry : field.entrySet()) {
+			String key = entry.getKey();
+			Object value = entry.getValue();
+			String typeName = value.getClass().getTypeName();
+			switch (typeName) {
+			case "java.lang.String":
+			case "java.lang.Integer":
+			case "int":
+			case "java.util.Date":
+			case "java.lang.Boolean":
+			case "boolean":
+			case "java.lang.FLoat":
+			case "float":
+			case "java.lang.Long":
+			case "long":
+			case "java.lang.Byte":
+			case "byte":
+			case "java.lang.Short":
+			case "short":	
+			case "java.lang.Double":
+			case "double":
+			xContentBuilder.field(key, value);
+				break;
+			default:
+				Gson gson = new Gson();
+				String json = gson.toJson(value);
+				Map<String,Object> fromJson = gson.fromJson(json, new TypeToken<Map<String,Object>>(){}.getType());
+				xContentBuilder.startObject(key);
+				getXcontentBuilder(fromJson,xContentBuilder);
+				xContentBuilder.endObject();
+				break;
+			}
+			
 		}
 	}
 

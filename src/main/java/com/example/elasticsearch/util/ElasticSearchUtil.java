@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -20,15 +21,10 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation.Bucket;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
-import org.elasticsearch.search.aggregations.metrics.avg.Avg;
-import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
-import org.elasticsearch.search.aggregations.metrics.max.Max;
-import org.elasticsearch.search.aggregations.metrics.min.Min;
-import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 import org.elasticsearch.search.aggregations.metrics.stats.Stats;
 
+import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.SearchField;
 
@@ -40,7 +36,6 @@ import com.example.elasticsearch.vo.SearchField;
  */
 public class ElasticSearchUtil {
 
-	private static final Aggregation Stats = null;
 	private static Logger logger = Logger.getLogger(ElasticSearchUtil.class);
 
 	/**
@@ -49,59 +44,86 @@ public class ElasticSearchUtil {
 	 * @param declaredFields
 	 * @return
 	 */
-	public static XContentBuilder getXContentBuilder(Field[] declaredFields) {
+	public static XContentBuilder getXContentBuilder(Map<String,Class<?>> declaredFields) {
 		try {
-			XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("properties");
-			for (Field field : declaredFields) {
-				Class<?> type = field.getType();
+		XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("properties");
+		builder = getXContentBuilder(declaredFields,"",builder);
+			builder = builder.endObject().endObject();
+			return builder;
+		} catch (IOException e) {
+			logger.error("构造错误", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
+		}
+	}
+	
+	
+	
+	private static XContentBuilder getXContentBuilder(Map<String,Class<?>> declaredFields,String rootName,XContentBuilder rootBuilder) {
+		try {
+		
+			for (Map.Entry<String,Class<?>> field : declaredFields.entrySet()) { 
+				Class<?> type =field.getValue(); //field.getType();
 				String typename = type.getName();
-				String name = field.getName();
+				String name =field.getKey(); //field.getName();
+				if(!StringUtils.isEmpty(rootName)) {
+					name=rootName+"."+name;
+				}
 				switch (typename) {
 				case "java.lang.String":
-					builder = builder.startObject(name).field("type", "keyword").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "keyword").endObject();
 					break;
 				case "java.lang.Integer":
 				case "int":
-					builder = builder.startObject(name).field("type", "integer").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "integer").endObject();
 					break;
 				case "java.util.Date":
-					builder = builder.startObject(name).field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss")
+					rootBuilder = rootBuilder.startObject(name).field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss")
 							.endObject();
 					break;
 				case "boolean":
 				case "java.lang.Boolean":
-					builder = builder.startObject(name).field("type", "boolean").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "boolean").endObject();
 					break;
 				case "long":
 				case "java.lang.Long":
-					builder = builder.startObject(name).field("type", "long").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "long").endObject();
 					break;
 				case "byte":
 				case "java.lang.Byte":
-					builder = builder.startObject(name).field("type", "long").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "long").endObject();
 					break;
 				case "short":
 				case "java.lang.Short":
-					builder = builder.startObject(name).field("type", "short").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "short").endObject();
 					break;
 				case "double":
 				case "java.lang.Double":
-					builder = builder.startObject(name).field("type", "double").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "double").endObject();
 					break;
 				case "float":
 				case "java.lang.Float":
-					builder = builder.startObject(name).field("type", "float").endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "float").endObject();
 					break;
 				default:
+					Field[] fields = type.newInstance().getClass().getDeclaredFields();
+					Map<String, Class<?>> map = fieldsConvertMap(fields);
+					rootBuilder = getXContentBuilder(map, name,rootBuilder);
 					break;
 				}
 			}
-			builder = builder.endObject().endObject();
-			return builder;
-		} catch (IOException e) {
+			return rootBuilder;
+		} catch (Exception e) {
 			logger.error("解析匹配错误", e);
-			return null;
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
 		}
+	}
+	
+	public static Map<String,Class<?>> fieldsConvertMap(Field[] fields){
+    	Map<String,Class<?>> map = new HashMap<>();
+    	for (Field field : fields) {
+    		map.put(field.getName(), field.getType());
+		}
+		return map;
 	}
 
 	/**
@@ -252,38 +274,48 @@ public class ElasticSearchUtil {
 	 * @return
 	 */
 	public static Map<String, Object> transBean2Map(Object obj) {
-		if (obj == null) {
-			return null;
-		}
 		Map<String, Object> map = new HashMap<String, Object>();
 		try {
 			BeanInfo beanInfo = Introspector.getBeanInfo(obj.getClass());
 			PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
 			for (PropertyDescriptor property : propertyDescriptors) {
 				String key = property.getName();
-				// 过滤class属性
-				if (!key.equals("class")) {
-					// 得到property对应的getter方法
-					Method getter = property.getReadMethod();
-					String typeName = property.getPropertyType().getName();
-					Object value = getter.invoke(obj);
-					if (value != null) {// 过滤为null的数据
-
-						if (typeName.equals("java.util.Date")) {
-
-							map.put(key, DateUtil.format((Date) value));
-						} else {
-							map.put(key, value);
-						}
-
-					}
+				Method getter = property.getReadMethod();
+				Object value = getter.invoke(obj);
+				String typeName = property.getPropertyType().getName();
+				switch (typeName) {
+				case "java.lang.String":
+				case "java.lang.Integer":
+				case "int":
+				case "java.lang.Boolean":
+				case "boolean":
+				case "java.lang.FLoat":
+				case "float":
+				case "java.lang.Long":
+				case "long":
+				case "java.lang.Byte":
+				case "byte":
+				case "java.lang.Short":
+				case "short":	
+				case "java.lang.Double":
+				case "double":
+					map.put(key, value);
+					break;
+				case "java.util.Date":
+					map.put(key, DateUtil.format((Date) value));
+				    break;
+				case "java.lang.Class":
+					break;
+				default:
+					map.put(key, transBean2Map(value));
+					break;
 				}
 			}
+			return map;
 		} catch (Exception e) {
-
+            throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "object转map出现错误");
 		}
-		return map;
-
+	
 	}
 
 	/**

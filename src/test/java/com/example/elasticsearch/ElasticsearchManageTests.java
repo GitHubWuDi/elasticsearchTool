@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.example.elasticsearch.service.ElasticSearchManage;
+import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.BookVO;
 import com.example.elasticsearch.vo.TestVO;
 
@@ -93,7 +94,8 @@ public class ElasticsearchManageTests {
 		int repliceCount = 1;
 		BookVO bookVO = new BookVO();
 		Field[] fields = bookVO.getClass().getDeclaredFields();
-		Boolean result = elasticSearchManage.createEsIndex(indexName, mapping, shardCount, repliceCount, fields);
+		Map<String, Class<?>> fieldsConvertMap = ElasticSearchUtil.fieldsConvertMap(fields);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, mapping, shardCount, repliceCount, fieldsConvertMap);
 		assertEquals(true, result);
 	}
 	

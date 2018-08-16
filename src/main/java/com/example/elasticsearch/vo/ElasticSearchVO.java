@@ -2,11 +2,13 @@ package com.example.elasticsearch.vo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.example.elasticsearch.util.DateUtil;
 import com.example.elasticsearch.util.page.PageRes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 import lombok.Data;
 
@@ -67,6 +69,23 @@ public class ElasticSearchVO<T> {
 	}
 	
 	/**
+	 * map对应结构的转换
+	 * @return
+	 */
+	public List<Map<String,Object>> getList(){
+		List<Map<String,Object>> list = new ArrayList<>();
+		Gson gson = new GsonBuilder().setDateFormat(DateUtil.DEFAULT_DATE_PATTERN).create();
+		List<HitsChild<T>> hits = getHits().getHits();
+		for (HitsChild<T> hitsChild : hits) {
+			T source = hitsChild.get_source();
+			String json = gson.toJson(source);
+			Map<String,Object> map= gson.fromJson(json,  new TypeToken<Map<String,Object>>(){}.getType());
+			list.add(map);
+		}
+		return list;
+	}
+	
+	/**
 	 * 分页数据结构化
 	 * @param clazz
 	 * @return
@@ -80,4 +99,12 @@ public class ElasticSearchVO<T> {
 		return findByPage;
 	}
 	
+	public PageRes<Map<String,Object>> toPaginationResponse(){
+		PageRes<Map<String,Object>> findByPage = new PageRes<Map<String,Object>>();
+		List<Map<String,Object>> listResult =getList();
+		findByPage.setList(listResult);
+		long total = getHits().getTotal();
+		findByPage.setTotal(total);
+		return findByPage;
+	}
 }

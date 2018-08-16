@@ -119,7 +119,8 @@ public abstract class ElasticSearchService<T> {
 		Field[] fields = clazz.getDeclaredFields();
 		String indexName = getIndexName();
 		String type = getType();
-		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fields);
+		Map<String, Class<?>> fieldsConvertMap = ElasticSearchUtil.fieldsConvertMap(fields);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fieldsConvertMap);
 		return result;
 		
 	}

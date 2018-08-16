@@ -62,7 +62,7 @@ public interface ElasticSearchManage {
 	 * @param fileds
 	 * @return
 	 */
-	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Field[] fileds);
+	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Map<String,Class<?>> fields);
 	
 	
 	/**
