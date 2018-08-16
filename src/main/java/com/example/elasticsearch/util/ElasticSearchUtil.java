@@ -329,6 +329,7 @@ public class ElasticSearchUtil {
 				case "short":	
 				case "java.lang.Double":
 				case "double":
+				case "java.util.Map":	
 					map.put(key, value);
 					break;
 				case "java.util.Date":

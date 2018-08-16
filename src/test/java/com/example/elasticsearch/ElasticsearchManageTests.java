@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.BookVO;
-import com.example.elasticsearch.vo.TestVO;
 
 /**
  * @author wudi
@@ -83,6 +83,18 @@ public class ElasticsearchManageTests {
 		assertEquals(false, result);
 	}
 
+	
+	public static void main(String[] args) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		List<String> list = new ArrayList<>();
+		list.add("1");
+		list.add("1");
+		list.add("1");
+		if(list.size()>0){
+			String typeName = list.get(0).getClass().getTypeName();
+			System.out.println(typeName);
+		}
+	}
+	
 	/**
 	 * 创建索引-属性创建索引（包含index，mapping，shardCount，repliceCount，fileds）
 	 */

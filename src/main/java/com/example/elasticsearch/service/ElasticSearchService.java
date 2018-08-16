@@ -144,6 +144,8 @@ public abstract class ElasticSearchService<T> {
 		        Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(value,name);
 		        fieldsConvertMap.putAll(fieldMap);
 				break;
+//			case "java.util.List":
+//				break;
 			default:
 				fieldsConvertMap.put(name, field.getType());
 				break;

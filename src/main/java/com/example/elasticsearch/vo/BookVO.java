@@ -1,6 +1,7 @@
 package com.example.elasticsearch.vo;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,6 +27,7 @@ public class BookVO {
 	private Integer lt_word_count; //小于某个数
 	private PersonVO personVO;
 	private Map<String,Object> mapVO;
+	//private List<String> list;
 	
 	public String getTitle() {
 		return title;
@@ -99,6 +101,15 @@ public class BookVO {
 		this.mapVO = mapVO;
 	}
 
+//	public List<String> getList() {
+//		return list;
+//	}
+//
+//	public void setList(List<String> list) {
+//		this.list = list;
+//	}
+
+	
 	
 	
 }
