@@ -3,7 +3,9 @@ package com.example.elasticsearch.service;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,21 +143,91 @@ public abstract class ElasticSearchService<T> {
 			case "java.util.Map":
 		        //获取属性值
 		        Map<String,Object> value = (Map<String,Object>)field.get(entity);
-		        Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(value,name);
-		        fieldsConvertMap.putAll(fieldMap);
+		        if(value!=null){
+		        	Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(value,name);
+		        	fieldsConvertMap.putAll(fieldMap);
+		        }
 				break;
-//			case "java.util.List":
-//				break;
+			case "java.util.List":
+				String parameterTypeName = getParamterTypeByList(field);
+				Map<String, Class<?>> mapByList = getMapParamerInfoByList(parameterTypeName, name, field, entity);
+				fieldsConvertMap.putAll(mapByList);
+				break;
 			default:
 				fieldsConvertMap.put(name, field.getType());
 				break;
 			}
 			}catch(Exception e) {
-				e.printStackTrace();
+				 logger.error("拼接解析出现错误", e);
+				 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
 			}
 		}
 		return fieldsConvertMap;
 	}
+	
+	
+	/**
+	 * 获得List对应的Map<String,Class<?>>
+	 * @param parameterTypeName
+	 * @param key
+	 * @param field
+	 * @param entity
+	 * @return
+	 */
+	 private Map<String,Class<?>> getMapParamerInfoByList(String parameterTypeName,String key,Field field,T entity){
+		 Map<String,Class<?>> map = new HashMap<>();
+		 try{
+			 switch (parameterTypeName) {
+			 case "java.lang.String":
+			 case "java.lang.Integer":
+			 case "java.lang.Boolean":
+			 case "java.lang.FLoat":
+			 case "java.lang.Long":
+			 case "java.lang.Byte":
+			 case "java.lang.Short":
+			 case "java.lang.Double":
+				 Class<?> basicName = Class.forName(parameterTypeName);
+				 map.put(key, basicName);
+				 break;
+			 case "java.util.Map":
+				 List<Map<String,Object>> listMap = (List<Map<String,Object>>)field.get(entity);
+				 for (Map<String, Object> childrenMap : listMap) {
+					 Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(childrenMap,key);
+					 map.putAll(fieldMap);
+				}
+				 break;
+			 default: //业务实体
+				 Class<?> voName = Class.forName(parameterTypeName);
+				 map.put(key, voName);
+				 break;
+			 }
+		 }catch(Exception e){
+			 logger.error("List拼接解析出现错误", e);
+			 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+		 }
+		return map;
+	 }
+	
+	/**
+	 * 获得List类型当中
+	 * @param entity
+	 * @return
+	 */
+	private String getParamterTypeByList(Field field){
+		String typeName = null;
+		try{
+			Type genericType = field.getGenericType();
+			ParameterizedType pt = (ParameterizedType) genericType;
+			Type ts = pt.getActualTypeArguments()[0];
+			typeName = ts.getTypeName();
+		}catch(Exception e){
+			logger.info("泛型实例化异常", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+		}
+		return typeName;
+	}
+	
+	
 	/**
 	 * 根据id获得对应的doc
 	 * 

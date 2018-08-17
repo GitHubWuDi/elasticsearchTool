@@ -154,11 +154,15 @@ public class ElasticsearchServiceTests {
 		bookVO.setPersonVO(personVO);
 		Map<String,Object> map = new HashMap<>();
 		map.put("name", "wudi");
-		Map<String,Object> childrenMap = new HashMap<>();
-		childrenMap.put("name", "wudi");
-		childrenMap.put("age", 10);
-		map.put("children", childrenMap);
-		bookVO.setMapVO(map);
+		List<String> list = new ArrayList<>();
+		list.add("1");
+		list.add("2");
+		bookVO.setList(list);
+//		Map<String,Object> childrenMap = new HashMap<>();
+//		childrenMap.put("name", "wudi");
+//		childrenMap.put("age", 10);
+//		map.put("children", childrenMap);
+//		bookVO.setMapVO(map);
 		Serializable save = bookServiceTest.save(bookVO);
 		assertEquals("success", save);
 	}

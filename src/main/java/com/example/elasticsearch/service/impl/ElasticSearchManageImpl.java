@@ -2,6 +2,7 @@ package com.example.elasticsearch.service.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -57,6 +58,7 @@ import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.example.elasticsearch.enums.FieldType;
 import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.service.ElasticSearchManage;
+import com.example.elasticsearch.util.DateUtil;
 import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.EsDocVO;
@@ -272,7 +274,6 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			case "java.lang.String":
 			case "java.lang.Integer":
 			case "int":
-			case "java.util.Date":
 			case "java.lang.Boolean":
 			case "boolean":
 			case "java.lang.FLoat":
@@ -287,6 +288,8 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			case "double":
 			xContentBuilder.field(key, value);
 				break;
+			case "java.util.Date":
+			xContentBuilder.field(key, DateUtil.format((Date)value));
 			default:
 				Gson gson = new Gson();
 				String json = gson.toJson(value);

@@ -3,6 +3,8 @@ package com.example.elasticsearch;
 import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -86,13 +88,13 @@ public class ElasticsearchManageTests {
 	
 	public static void main(String[] args) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		List<String> list = new ArrayList<>();
-		list.add("1");
-		list.add("1");
-		list.add("1");
-		if(list.size()>0){
-			String typeName = list.get(0).getClass().getTypeName();
-			System.out.println(typeName);
-		}
+		BookVO bookVO = new BookVO();
+		Field field = bookVO.getClass().getDeclaredField("list");
+		Type genericType = field.getGenericType();
+		ParameterizedType pt = (ParameterizedType) genericType;
+		Type ts = pt.getActualTypeArguments()[0];
+		String typeName2 = ts.getTypeName();
+		System.out.println(typeName2);
 	}
 	
 	/**
