@@ -1,6 +1,7 @@
 package com.example.elasticsearch.service.impl;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -252,25 +253,21 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			} else {
 				return SUCCESS;
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			logger.error("创建doc报错", e);
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), ResultCodeEnum.ERROR.getMsg());
 		}
 	}
 	
 	/**
-	 * XcontentBuilder对应方法的修改
-	 * @param field
+	 * 获得对应的XContentBuilder
 	 * @param xContentBuilder
-	 * @throws IOException
+	 * @param filedTypeName
 	 */
-	private void getXcontentBuilder(Map<String, Object> field,
-			XContentBuilder xContentBuilder) throws IOException {
-		for (Map.Entry<String, Object> entry : field.entrySet()) {
-			String key = entry.getKey();
-			Object value = entry.getValue();
-			String typeName = value.getClass().getTypeName();
-			switch (typeName) {
+	private void getContextBuilderByList(XContentBuilder xContentBuilder,String filedTypeName,Object value,String key){
+		Gson gson = new Gson();
+		try{
+			switch (filedTypeName) {
 			case "java.lang.String":
 			case "java.lang.Integer":
 			case "int":
@@ -286,12 +283,17 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			case "short":	
 			case "java.lang.Double":
 			case "double":
-			xContentBuilder.field(key, value);
+				//TODO 这个地方怎么怎么保存
+				String strJson = gson.toJson(value);
+				xContentBuilder.field(key, strJson);
 				break;
+			case "java.util.ArrayList":
+				Field declaredField = value.getClass().getDeclaredField(key);
+				String fieldType = ElasticSearchUtil.getParamterTypeByList(declaredField);
+				getContextBuilderByList(xContentBuilder, fieldType, value, key);
 			case "java.util.Date":
-			xContentBuilder.field(key, DateUtil.format((Date)value));
+				xContentBuilder.field(key, DateUtil.format((Date)value));
 			default:
-				Gson gson = new Gson();
 				String json = gson.toJson(value);
 				Map<String,Object> fromJson = gson.fromJson(json, new TypeToken<Map<String,Object>>(){}.getType());
 				xContentBuilder.startObject(key);
@@ -299,8 +301,72 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 				xContentBuilder.endObject();
 				break;
 			}
-			
+		}catch(Exception e){
+			logger.error("getContextBuilderByList报错", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
 		}
+	}
+	
+	
+	/**
+	 * XcontentBuilder对应方法的修改
+	 * @param field
+	 * @param xContentBuilder
+	 * @throws IOException
+	 */
+	private void getXcontentBuilder(Map<String, Object> field,
+			XContentBuilder xContentBuilder) {
+		try{
+			for (Map.Entry<String, Object> entry : field.entrySet()) {
+				String key = entry.getKey();
+				Object value = entry.getValue();
+				if(value!=null){
+					String typeName = value.getClass().getTypeName();
+					switch (typeName) {
+					case "java.lang.String":
+					case "java.lang.Integer":
+					case "int":
+					case "java.lang.Boolean":
+					case "boolean":
+					case "java.lang.FLoat":
+					case "float":
+					case "java.lang.Long":
+					case "long":
+					case "java.lang.Byte":
+					case "byte":
+					case "java.lang.Short":
+					case "short":	
+					case "java.lang.Double":
+					case "double":
+						xContentBuilder.field(key, value);
+						break;
+					case "java.util.ArrayList":
+						//TODO 获得获得List当中的类型
+						List valueList = (List)value;
+						if(valueList.size()>0){
+							String fieldType = valueList.get(0).getClass().getTypeName();
+							getContextBuilderByList(xContentBuilder, fieldType, value, key);
+						}
+						break;
+					case "java.util.Date":
+						xContentBuilder.field(key, DateUtil.format((Date)value));
+					default:
+						Gson gson = new Gson();
+						String json = gson.toJson(value);
+						Map<String,Object> fromJson = gson.fromJson(json, new TypeToken<Map<String,Object>>(){}.getType());
+						xContentBuilder.startObject(key);
+						getXcontentBuilder(fromJson,xContentBuilder);
+						xContentBuilder.endObject();
+						break;
+					}
+				}
+				
+			}
+		}catch(Exception e){
+			logger.error("getXcontentBuilder报错", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+		}
+		
 	}
 
 	@Override

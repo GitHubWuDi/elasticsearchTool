@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,7 +148,7 @@ public abstract class ElasticSearchService<T> {
 		        }
 				break;
 			case "java.util.List":
-				String parameterTypeName = getParamterTypeByList(field);
+				String parameterTypeName = ElasticSearchUtil.getParamterTypeByList(field);
 				Map<String, Class<?>> mapByList = getMapParamerInfoByList(parameterTypeName, name, field, entity);
 				fieldsConvertMap.putAll(mapByList);
 				break;
@@ -207,26 +206,6 @@ public abstract class ElasticSearchService<T> {
 		 }
 		return map;
 	 }
-	
-	/**
-	 * 获得List类型当中
-	 * @param entity
-	 * @return
-	 */
-	private String getParamterTypeByList(Field field){
-		String typeName = null;
-		try{
-			Type genericType = field.getGenericType();
-			ParameterizedType pt = (ParameterizedType) genericType;
-			Type ts = pt.getActualTypeArguments()[0];
-			typeName = ts.getTypeName();
-		}catch(Exception e){
-			logger.info("泛型实例化异常", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
-		}
-		return typeName;
-	}
-	
 	
 	/**
 	 * 根据id获得对应的doc

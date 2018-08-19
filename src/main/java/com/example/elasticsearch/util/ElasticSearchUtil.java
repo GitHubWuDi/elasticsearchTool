@@ -6,6 +6,9 @@ import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +30,8 @@ import org.elasticsearch.search.aggregations.metrics.stats.Stats;
 import com.example.elasticsearch.enums.ResultCodeEnum;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.SearchField;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 /**
  * @author wudi
@@ -44,10 +49,10 @@ public class ElasticSearchUtil {
 	 * @param declaredFields
 	 * @return
 	 */
-	public static XContentBuilder getXContentBuilder(Map<String,Class<?>> declaredFields) {
+	public static XContentBuilder getXContentBuilder(Map<String, Class<?>> declaredFields) {
 		try {
-		XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("properties");
-		builder = getXContentBuilder(declaredFields,"",builder);
+			XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("properties");
+			builder = getXContentBuilder(declaredFields, "", builder);
 			builder = builder.endObject().endObject();
 			return builder;
 		} catch (IOException e) {
@@ -55,18 +60,17 @@ public class ElasticSearchUtil {
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
 		}
 	}
-	
-	
-	
-	private static XContentBuilder getXContentBuilder(Map<String,Class<?>> declaredFields,String rootName,XContentBuilder rootBuilder) {
+
+	private static XContentBuilder getXContentBuilder(Map<String, Class<?>> declaredFields, String rootName,
+			XContentBuilder rootBuilder) {
 		try {
-		
-			for (Map.Entry<String,Class<?>> field : declaredFields.entrySet()) { 
-				Class<?> type =field.getValue(); //field.getType();
+
+			for (Map.Entry<String, Class<?>> field : declaredFields.entrySet()) {
+				Class<?> type = field.getValue(); // field.getType();
 				String typename = type.getName();
-				String name =field.getKey(); //field.getName();
-				if(!StringUtils.isEmpty(rootName)) {
-					name=rootName+"."+name;
+				String name = field.getKey(); // field.getName();
+				if (!StringUtils.isEmpty(rootName)) {
+					name = rootName + "." + name;
 				}
 				switch (typename) {
 				case "java.lang.String":
@@ -77,8 +81,8 @@ public class ElasticSearchUtil {
 					rootBuilder = rootBuilder.startObject(name).field("type", "integer").endObject();
 					break;
 				case "java.util.Date":
-					rootBuilder = rootBuilder.startObject(name).field("type", "date").field("format", "yyyy-MM-dd HH:mm:ss")
-							.endObject();
+					rootBuilder = rootBuilder.startObject(name).field("type", "date")
+							.field("format", "yyyy-MM-dd HH:mm:ss").endObject();
 					break;
 				case "boolean":
 				case "java.lang.Boolean":
@@ -107,7 +111,7 @@ public class ElasticSearchUtil {
 				default:
 					Field[] fields = type.newInstance().getClass().getDeclaredFields();
 					Map<String, Class<?>> map = fieldsConvertMap(fields);
-					rootBuilder = getXContentBuilder(map, name,rootBuilder);
+					rootBuilder = getXContentBuilder(map, name, rootBuilder);
 					break;
 				}
 			}
@@ -117,11 +121,11 @@ public class ElasticSearchUtil {
 			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
 		}
 	}
-	
-	public static Map<String,Class<?>> fieldsConvertMap(Field[] fields){
-    	Map<String,Class<?>> map = new HashMap<>();
-    	for (Field field : fields) {
-    		map.put(field.getName(), field.getType());
+
+	public static Map<String, Class<?>> fieldsConvertMap(Field[] fields) {
+		Map<String, Class<?>> map = new HashMap<>();
+		for (Field field : fields) {
+			map.put(field.getName(), field.getType());
 		}
 		return map;
 	}
@@ -140,26 +144,25 @@ public class ElasticSearchUtil {
 		return query;
 	}
 
-	
-	
 	/**
 	 * 获得Map<String,Class<?>>
+	 * 
 	 * @param map
 	 * @return
 	 */
-	public static  Map<String,Class<?>> getFieldMap(Map<String, Object> map,String rootName) {
-		Map<String,Class<?>> field = new HashMap<>();
-		for (Map.Entry<String,Object> entry : map.entrySet()){
+	public static Map<String, Class<?>> getFieldMap(Map<String, Object> map, String rootName) {
+		Map<String, Class<?>> field = new HashMap<>();
+		for (Map.Entry<String, Object> entry : map.entrySet()) {
 			String key = entry.getKey();
-			if(!StringUtils.isEmpty(rootName)) {
-				key=rootName+"."+key;
+			if (!StringUtils.isEmpty(rootName)) {
+				key = rootName + "." + key;
 			}
 			Object value = entry.getValue();
 			String name = entry.getValue().getClass().getName();
 			switch (name) {
 			case "java.util.Map":
 			case "java.util.HashMap":
-				Map<String,Object> maps = (Map<String,Object>)value;
+				Map<String, Object> maps = (Map<String, Object>) value;
 				field.putAll(getFieldMap(maps, key));
 				break;
 			default:
@@ -170,6 +173,7 @@ public class ElasticSearchUtil {
 		}
 		return field;
 	}
+
 	/**
 	 * 查询语句
 	 * 
@@ -296,6 +300,82 @@ public class ElasticSearchUtil {
 		}
 		return query;
 	}
+   /**
+    * 获得泛型的类型
+    * @param field
+    * @return
+    */
+	public static String getParamterTypeByList(Field field) {
+		String typeName = null;
+		try {
+			Type genericType = field.getGenericType();
+			ParameterizedType pt = (ParameterizedType) genericType;
+			Type ts = pt.getActualTypeArguments()[0];
+			typeName = ts.getTypeName();
+		} catch (Exception e) {
+			logger.info("泛型实例化异常", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+		}
+		return typeName;
+	}
+
+	public static void main(String[] args) {
+		List<String> list = new ArrayList<>();
+		list.add("1");
+		list.add("2");
+		Type t = list.getClass().getGenericSuperclass();
+		ParameterizedType pt = (ParameterizedType) t;
+		Type type = pt.getActualTypeArguments()[0];
+		Class<?> clazz = (Class<?>)type;
+		String typeName = clazz.getTypeName();
+		System.out.println(typeName);
+	}
+	
+	/**
+	 * 获得List对应的Map<String,Class<?>>
+	 * 
+	 * @param parameterTypeName
+	 * @param key
+	 * @param field
+	 * @param entity
+	 * @return
+	 */
+	private static Map<String, Object> getMapParamerInfoByList(String key, Object value,Object obj) {
+		Map<String, Object> map = new HashMap<>();
+		try {
+			Field field = obj.getClass().getDeclaredField(key);
+			String paramterType = getParamterTypeByList(field); // 获得List当中的包装类
+			switch (paramterType) {
+			case "java.lang.String":
+			case "java.lang.Integer":
+			case "java.lang.Boolean":
+			case "java.lang.FLoat":
+			case "java.lang.Long":
+			case "java.lang.Byte":
+			case "java.lang.Short":
+			case "java.lang.Double":
+				map.put(key, value);
+				break;
+			case "java.util.Map":
+				List<Map<String, Object>> listMap = (List<Map<String, Object>>) value;
+				for (Map<String, Object> childrenMap : listMap) {
+					map.putAll(childrenMap);
+				}
+				break;
+			default: //业务实体
+				List<Object> businessList = (List<Object>) value;
+				for (Object busiObject : businessList) {
+					Map<String, Object> childrenMap = transBean2Map(busiObject);
+					map.putAll(childrenMap);
+				}
+				break;
+			}
+		} catch (Exception e) {
+			logger.error("List数据解析出现错误", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+		}
+		return map;
+	}
 
 	/**
 	 * 将对应的实体转换成map数据结构
@@ -326,15 +406,19 @@ public class ElasticSearchUtil {
 				case "java.lang.Byte":
 				case "byte":
 				case "java.lang.Short":
-				case "short":	
+				case "short":
 				case "java.lang.Double":
 				case "double":
-				case "java.util.Map":	
+				case "java.util.Map":
 					map.put(key, value);
+					break;
+				case "java.util.List":
+					Map<String, Object> mapParamerInfoByList = getMapParamerInfoByList(key, value,obj);
+					map.put(key, mapParamerInfoByList);
 					break;
 				case "java.util.Date":
 					map.put(key, DateUtil.format((Date) value));
-				    break;
+					break;
 				case "java.lang.Class":
 					break;
 				default:
@@ -344,9 +428,9 @@ public class ElasticSearchUtil {
 			}
 			return map;
 		} catch (Exception e) {
-            throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "object转map出现错误");
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "object转map出现错误");
 		}
-	
+
 	}
 
 	/**
@@ -371,7 +455,7 @@ public class ElasticSearchUtil {
 			result.add(mapss);
 			break;
 		case Numberstat:
-			Stats stats = (Stats)aggregation;
+			Stats stats = (Stats) aggregation;
 			Map<String, Object> mapstats = new HashMap<>();
 			double avg = stats.getAvg();
 			long count = stats.getCount();
@@ -395,6 +479,7 @@ public class ElasticSearchUtil {
 
 	/**
 	 * 分组递归
+	 * 
 	 * @param field
 	 * @param aggregation
 	 * @param result
