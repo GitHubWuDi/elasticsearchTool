@@ -392,15 +392,11 @@ public class ElasticSearchUtil {
 	}
 
 	public static void main(String[] args) {
-		List<String> list = new ArrayList<>();
-		list.add("1");
-		list.add("2");
-		Type t = list.getClass().getGenericSuperclass();
-		ParameterizedType pt = (ParameterizedType) t;
-		Type type = pt.getActualTypeArguments()[0];
-		Class<?> clazz = (Class<?>)type;
-		String typeName = clazz.getTypeName();
-		System.out.println(typeName);
+		Map<String,Object> map = new HashMap<>();
+		map.put("date", new Date());
+		map.put("name", "wudi");
+		Map<String, Object> transBean2Map = transBean2Map(map);
+		System.out.println(transBean2Map);
 	}
 	
 	/**
@@ -450,6 +446,8 @@ public class ElasticSearchUtil {
 		return map;
 	}
 
+	
+	
 	/**
 	 * 将对应的实体转换成map数据结构
 	 * 

@@ -219,12 +219,16 @@ public class ElasticsearchServiceTests {
 	
 	@Test
 	public void bulkDocsMap(){
-		List<Map<String,Object>> bookList = new ArrayList<>();
+		List<Map<String,Object>> mapList = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
 			Map<String,Object> map = new HashMap<>();
 			map.put("name", "wudi");
+			map.put("guid", String.valueOf(i));
 			map.put("date", new Date());
+			mapList.add(map);
 		}
+		elasticSearchMapManage.addList("test", "test", mapList, "guid");
+		
 		//bookServiceTest.addList(bookList);
 	}
 	

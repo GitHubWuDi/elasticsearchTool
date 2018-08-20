@@ -344,6 +344,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 						break;
 					case "java.util.Date":
 						xContentBuilder.field(key, DateUtil.format((Date)value));
+						break;
 					default:
 						Gson gson = new Gson();
 						String json = gson.toJson(value);
@@ -679,16 +680,22 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	@Override
 	public String bulkCreateDocs(String indexName, String type, List<EsDocVO> list) {
 		BulkRequestBuilder bulkRequest = client.prepareBulk();
+		try{
 		for (EsDocVO esDocVO : list) {
 			String idValue = esDocVO.getIdValue();
 			Map<String, Object> map = esDocVO.getMap();
-			bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(map));
+				XContentBuilder xContentBuilder = XContentFactory.jsonBuilder().startObject();
+				getXcontentBuilder(map, xContentBuilder);
+				xContentBuilder.endObject();
+				bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(xContentBuilder));
+		  }
+		}catch(Exception e){
+			logger.error("拼接数据出现问题", e);
+			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
 		}
 		BulkResponse bulkResponse = bulkRequest.execute().actionGet();
 		String result = bulkResponse.toString();
 		return result;
 	}
-
-
 
 }
