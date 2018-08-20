@@ -1,5 +1,7 @@
 package com.example.elasticsearch.service;
 
+import static org.mockito.Matchers.contains;
+
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -147,11 +149,6 @@ public abstract class ElasticSearchService<T> {
 		        	fieldsConvertMap.putAll(fieldMap);
 		        }
 				break;
-//			case "java.util.List":
-//				String parameterTypeName = ElasticSearchUtil.getParamterTypeByList(field);
-//				Map<String, Class<?>> mapByList = getMapParamerInfoByList(parameterTypeName, name, field, entity);
-//				fieldsConvertMap.putAll(mapByList);
-//				break;
 			default:
 				fieldsConvertMap.put(name, field.getType());
 				break;

@@ -28,7 +28,8 @@ public class BookVO {
 	private PersonVO personVO;
 	private Map<String,Object> mapVO;
 	private List<String> listVO;
-	
+	private List<PersonVO> personListVO;
+	private List<Map<String,Object>> mapListVO;
 	public String getTitle() {
 		return title;
 	}
@@ -109,9 +110,19 @@ public class BookVO {
 		this.listVO = listVO;
 	}
 
-	
+	public List<PersonVO> getPersonListVO() {
+		return personListVO;
+	}
 
-	
-	
-	
+	public void setPersonListVO(List<PersonVO> personListVO) {
+		this.personListVO = personListVO;
+	}
+
+	public List<Map<String, Object>> getMapListVO() {
+		return mapListVO;
+	}
+
+	public void setMapListVO(List<Map<String, Object>> mapListVO) {
+		this.mapListVO = mapListVO;
+	}
 }

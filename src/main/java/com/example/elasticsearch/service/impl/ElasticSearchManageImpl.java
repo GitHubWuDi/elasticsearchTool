@@ -292,11 +292,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			case "java.util.Date":
 				xContentBuilder.field(key, DateUtil.format((Date)value));
 			default:
-				String json = gson.toJson(value);
-				Map<String,Object> fromJson = gson.fromJson(json, new TypeToken<Map<String,Object>>(){}.getType());
-				xContentBuilder.startObject(key);
-				getXcontentBuilder(fromJson,xContentBuilder);
-				xContentBuilder.endObject();
+				xContentBuilder.field(key, value);
 				break;
 			}
 		}catch(Exception e){

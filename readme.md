@@ -91,5 +91,10 @@
     public final static String indexName = "analysisresultIndex";
     public final static String typeName = "analysisresultType";
    
-   
+- 实体数据支持
+  1.基础属性
+  2.实体
+  3.Map结构
+  4.List
+    List当中包装的类可是基础类型,实体，Map  
             

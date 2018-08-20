@@ -152,12 +152,22 @@ public class ElasticsearchServiceTests {
 		personVO.setAge(10);
 		personVO.setName("wudi");
 		bookVO.setPersonVO(personVO);
-		Map<String,Object> map = new HashMap<>();
-		map.put("name", "wudi");
 		List<String> list = new ArrayList<>();
 		list.add("1");
 		list.add("2");
 		bookVO.setListVO(list);
+		PersonVO personVO1 = new PersonVO();
+		personVO1.setAge(20);
+		personVO1.setName("wudi");
+		List<PersonVO> personList = new ArrayList<>();
+		personList.add(personVO);
+		personList.add(personVO1);
+		List<Map<String,Object>> mapList = new ArrayList<>();
+		Map<String,Object> map = new HashMap<>();
+		map.put("name", "wudi");
+		mapList.add(map);
+		bookVO.setPersonListVO(personList);
+		bookVO.setMapListVO(mapList);
 //		Map<String,Object> childrenMap = new HashMap<>();
 //		childrenMap.put("name", "wudi");
 //		childrenMap.put("age", 10);
@@ -172,7 +182,7 @@ public class ElasticsearchServiceTests {
 	 */
 	@Test
 	public void bulkDocs(){
-		List<BookVO> list = new ArrayList<>();
+		List<BookVO> bookList = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
 			BookVO bookVO = new BookVO();
 			bookVO.setAuthor("wudi");
@@ -186,9 +196,25 @@ public class ElasticsearchServiceTests {
 			personVO.setAge(10);
 			personVO.setName("wudi");
 			bookVO.setPersonVO(personVO);
-			list.add(bookVO);
+			List<String> list = new ArrayList<>();
+			list.add("1");
+			list.add("2");
+			bookVO.setListVO(list);
+			PersonVO personVO1 = new PersonVO();
+			personVO1.setAge(20);
+			personVO1.setName("wudi");
+			List<PersonVO> personList = new ArrayList<>();
+			personList.add(personVO);
+			personList.add(personVO1);
+			List<Map<String,Object>> mapList = new ArrayList<>();
+			Map<String,Object> map = new HashMap<>();
+			map.put("name", "wudi");
+			mapList.add(map);
+			bookVO.setPersonListVO(personList);
+			bookVO.setMapListVO(mapList);
+			bookList.add(bookVO);
 		}
-		bookServiceTest.addList(list);
+		bookServiceTest.addList(bookList);
 	}
 	
 	/**

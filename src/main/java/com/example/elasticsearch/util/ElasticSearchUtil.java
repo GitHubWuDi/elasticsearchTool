@@ -1,5 +1,7 @@
 package com.example.elasticsearch.util;
 
+import static org.mockito.Matchers.contains;
+
 import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
@@ -109,12 +111,7 @@ public class ElasticSearchUtil {
 					rootBuilder = rootBuilder.startObject(name).field("type", "float").endObject();
 					break;
 				case "java.util.List":
-					Field declaredField = obj.getClass().getDeclaredField(name);
-					String paramterType = ElasticSearchUtil.getParamterTypeByList(declaredField);
-				    Class<?> forName = Class.forName(paramterType);
-				    Map<String, Class<?>> mapList = new HashMap<>();
-				    mapList.put(name, forName);
-				    rootBuilder = getXContentBuilder(mapList, name, rootBuilder,obj);
+					rootBuilder = getListXContentBuilder(rootBuilder, obj, name);
 					break;
 				default:
 					Field[] fields = type.newInstance().getClass().getDeclaredFields();
@@ -130,6 +127,73 @@ public class ElasticSearchUtil {
 		}
 	}
 
+	/**
+	 *获得List对应的数据
+	 * @param rootBuilder
+	 * @param obj
+	 * @param name
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	private static XContentBuilder getListXContentBuilder(XContentBuilder rootBuilder, Object obj, String name)
+			throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		Field declaredField = obj.getClass().getDeclaredField(name);
+		String paramterType = ElasticSearchUtil.getParamterTypeByList(declaredField);
+		if(paramterType.contains("java.util.Map")){
+			Map<String, Class<?>> maps = new HashMap<>();
+			declaredField.setAccessible(true);
+			List<Map<String,Object>> listMap = (List<Map<String,Object>>)declaredField.get(obj);
+			for (Map<String, Object> map : listMap) {
+				Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(map,name);
+				maps.putAll(fieldMap);
+			}
+			rootBuilder = getXContentBuilder(maps, name, rootBuilder,obj);
+		}else{
+			Class<?> forName = Class.forName(paramterType);
+			Map<String, Class<?>> mapList = new HashMap<>();
+			mapList.put(name, forName);
+			rootBuilder = getXContentBuilder(mapList, name, rootBuilder,obj);
+		}
+		return rootBuilder;
+	}
+
+	/**
+	 * 将map对应的数据转换成<key,clazz>
+	 * @param obj
+	 * @return
+	 */
+	private static Map<String, Class<?>> getMapFieldConvertMap(Object obj) {
+		Map<String, Class<?>> fieldsConvertMap=new HashMap<>();
+		Field[] fields = obj.getClass().getDeclaredFields();
+		for (Field field : fields) {
+	        field.setAccessible(true);
+	        String name = field.getName(); //获得属性
+			String typeName = field.getType().getName(); //获得typeName
+			try{
+			switch (typeName) {
+			case "java.util.Map":
+		        //获取属性值
+		        Map<String,Object> value = (Map<String,Object>)field.get(obj);
+		        if(value!=null){
+		        	Map<String, Class<?>> fieldMap =ElasticSearchUtil.getFieldMap(value,name);
+		        	fieldsConvertMap.putAll(fieldMap);
+		        }
+				break;
+			default:
+				fieldsConvertMap.put(name, field.getType());
+				break;
+			}
+			}catch(Exception e) {
+				 logger.error("拼接解析出现错误", e);
+				 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			}
+		}
+		return fieldsConvertMap;
+	}
+	
+	
 	public static Map<String, Class<?>> fieldsConvertMap(Field[] fields) {
 		Map<String, Class<?>> map = new HashMap<>();
 		for (Field field : fields) {
@@ -364,17 +428,18 @@ public class ElasticSearchUtil {
 			case "java.lang.Double":
 				map.put(key, value);
 				break;
-			case "java.util.Map":
-				List<Map<String, Object>> listMap = (List<Map<String, Object>>) value;
-				for (Map<String, Object> childrenMap : listMap) {
-					map.putAll(childrenMap);
-				}
-				break;
 			default: //业务实体
-				List<Object> businessList = (List<Object>) value;
-				for (Object busiObject : businessList) {
-					Map<String, Object> childrenMap = transBean2Map(busiObject);
-					map.putAll(childrenMap);
+				if(paramterType.contains("java.util.Map")){
+					List<Map<String, Object>> listMap = (List<Map<String, Object>>) value;
+					map.put(key, listMap);
+				}else{
+					List<Object> businessList = (List<Object>) value;
+					List<Map<String,Object>> mapList = new ArrayList<>();
+					for (Object busiObject : businessList) {
+						Map<String, Object> childrenMap = transBean2Map(busiObject);
+						mapList.add(childrenMap);
+					}
+					map.put(key, mapList);
 				}
 				break;
 			}
