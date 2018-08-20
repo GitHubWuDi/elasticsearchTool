@@ -121,7 +121,7 @@ public abstract class ElasticSearchService<T> {
 		Map<String, Class<?>> fieldsConvertMap = getFieldConvertMap(entity);
 		String indexName = getIndexName();
 		String type = getType();
-		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount,fieldsConvertMap);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount,fieldsConvertMap,entity);
 		return result;
 	}
 
@@ -147,11 +147,11 @@ public abstract class ElasticSearchService<T> {
 		        	fieldsConvertMap.putAll(fieldMap);
 		        }
 				break;
-			case "java.util.List":
-				String parameterTypeName = ElasticSearchUtil.getParamterTypeByList(field);
-				Map<String, Class<?>> mapByList = getMapParamerInfoByList(parameterTypeName, name, field, entity);
-				fieldsConvertMap.putAll(mapByList);
-				break;
+//			case "java.util.List":
+//				String parameterTypeName = ElasticSearchUtil.getParamterTypeByList(field);
+//				Map<String, Class<?>> mapByList = getMapParamerInfoByList(parameterTypeName, name, field, entity);
+//				fieldsConvertMap.putAll(mapByList);
+//				break;
 			default:
 				fieldsConvertMap.put(name, field.getType());
 				break;

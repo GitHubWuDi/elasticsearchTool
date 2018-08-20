@@ -96,7 +96,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 	
 	private Boolean createIndex(String indexName,String type, Map<String, Object> map) {
 		Map<String, Class<?>> fieldMap = getFieldMap(map);
-		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fieldMap);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, type, shardCount, repliceCount, fieldMap,map);
 		return result;
 	}
 

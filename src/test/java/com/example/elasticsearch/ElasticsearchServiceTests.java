@@ -157,7 +157,7 @@ public class ElasticsearchServiceTests {
 		List<String> list = new ArrayList<>();
 		list.add("1");
 		list.add("2");
-		bookVO.setList(list);
+		bookVO.setListVO(list);
 //		Map<String,Object> childrenMap = new HashMap<>();
 //		childrenMap.put("name", "wudi");
 //		childrenMap.put("age", 10);

@@ -27,7 +27,7 @@ public class BookVO {
 	private Integer lt_word_count; //小于某个数
 	private PersonVO personVO;
 	private Map<String,Object> mapVO;
-	private List<String> list;
+	private List<String> listVO;
 	
 	public String getTitle() {
 		return title;
@@ -101,13 +101,15 @@ public class BookVO {
 		this.mapVO = mapVO;
 	}
 
-	public List<String> getList() {
-		return list;
+	public List<String> getListVO() {
+		return listVO;
 	}
 
-	public void setList(List<String> list) {
-		this.list = list;
+	public void setListVO(List<String> listVO) {
+		this.listVO = listVO;
 	}
+
+	
 
 	
 	

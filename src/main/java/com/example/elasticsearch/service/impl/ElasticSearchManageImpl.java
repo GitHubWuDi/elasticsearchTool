@@ -136,13 +136,13 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	}
 
 	@Override
-	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Map<String,Class<?>> fields) {
+	public Boolean createEsIndex(String indexName,String mapping,int shardCount,int repliceCount,Map<String,Class<?>> fields,Object obj) {
 		Boolean indexResult = isExistEsIndex(indexName);
 		if (indexResult) {
 			logger.info("索引和类型已经存在，无法创建");
 			return false;
 		} else {
-			XContentBuilder builder = ElasticSearchUtil.getXContentBuilder(fields);
+			XContentBuilder builder = ElasticSearchUtil.getXContentBuilder(fields,obj);
 			Builder settings = Settings.builder().put(number_of_shards, shardCount)
 					.put(number_of_replicas, repliceCount).put(max_result_window, Integer.MAX_VALUE);
 			CreateIndexResponse createIndexResponse = client.admin().indices().prepareCreate(indexName)
@@ -283,9 +283,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			case "short":	
 			case "java.lang.Double":
 			case "double":
-				//TODO 这个地方怎么怎么保存
-				String strJson = gson.toJson(value);
-				xContentBuilder.field(key, strJson);
+				xContentBuilder.field(key, value);
 				break;
 			case "java.util.ArrayList":
 				Field declaredField = value.getClass().getDeclaredField(key);

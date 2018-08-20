@@ -49,10 +49,10 @@ public class ElasticSearchUtil {
 	 * @param declaredFields
 	 * @return
 	 */
-	public static XContentBuilder getXContentBuilder(Map<String, Class<?>> declaredFields) {
+	public static XContentBuilder getXContentBuilder(Map<String, Class<?>> declaredFields,Object obj) {
 		try {
 			XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("properties");
-			builder = getXContentBuilder(declaredFields, "", builder);
+			builder = getXContentBuilder(declaredFields, "", builder,obj);
 			builder = builder.endObject().endObject();
 			return builder;
 		} catch (IOException e) {
@@ -62,7 +62,7 @@ public class ElasticSearchUtil {
 	}
 
 	private static XContentBuilder getXContentBuilder(Map<String, Class<?>> declaredFields, String rootName,
-			XContentBuilder rootBuilder) {
+			XContentBuilder rootBuilder,Object obj) {
 		try {
 
 			for (Map.Entry<String, Class<?>> field : declaredFields.entrySet()) {
@@ -108,10 +108,18 @@ public class ElasticSearchUtil {
 				case "java.lang.Float":
 					rootBuilder = rootBuilder.startObject(name).field("type", "float").endObject();
 					break;
+				case "java.util.List":
+					Field declaredField = obj.getClass().getDeclaredField(name);
+					String paramterType = ElasticSearchUtil.getParamterTypeByList(declaredField);
+				    Class<?> forName = Class.forName(paramterType);
+				    Map<String, Class<?>> mapList = new HashMap<>();
+				    mapList.put(name, forName);
+				    rootBuilder = getXContentBuilder(mapList, name, rootBuilder,obj);
+					break;
 				default:
 					Field[] fields = type.newInstance().getClass().getDeclaredFields();
 					Map<String, Class<?>> map = fieldsConvertMap(fields);
-					rootBuilder = getXContentBuilder(map, name, rootBuilder);
+					rootBuilder = getXContentBuilder(map, name, rootBuilder,obj);
 					break;
 				}
 			}

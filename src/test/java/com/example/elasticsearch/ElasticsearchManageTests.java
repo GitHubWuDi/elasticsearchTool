@@ -109,7 +109,7 @@ public class ElasticsearchManageTests {
 		BookVO bookVO = new BookVO();
 		Field[] fields = bookVO.getClass().getDeclaredFields();
 		Map<String, Class<?>> fieldsConvertMap = ElasticSearchUtil.fieldsConvertMap(fields);
-		Boolean result = elasticSearchManage.createEsIndex(indexName, mapping, shardCount, repliceCount, fieldsConvertMap);
+		Boolean result = elasticSearchManage.createEsIndex(indexName, mapping, shardCount, repliceCount, fieldsConvertMap,bookVO);
 		assertEquals(true, result);
 	}
 	
