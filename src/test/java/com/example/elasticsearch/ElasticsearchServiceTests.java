@@ -217,6 +217,17 @@ public class ElasticsearchServiceTests {
 		bookServiceTest.addList(bookList);
 	}
 	
+	@Test
+	public void bulkDocsMap(){
+		List<Map<String,Object>> bookList = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			Map<String,Object> map = new HashMap<>();
+			map.put("name", "wudi");
+			map.put("date", new Date());
+		}
+		//bookServiceTest.addList(bookList);
+	}
+	
 	/**
 	 * 根据id删除doc
 	 */
