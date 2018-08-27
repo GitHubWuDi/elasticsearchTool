@@ -1,4 +1,4 @@
-spring.data.elasticsearch.cluster-nodes: 192.168.199.139:9300
+spring.data.elasticsearch.cluster-nodes: 192.168.199.140:9300
 spring.data.elasticsearch.cluster-name: elasticsearch-cluster
 es.shardCount: 5
 es.repliceCount: 1
