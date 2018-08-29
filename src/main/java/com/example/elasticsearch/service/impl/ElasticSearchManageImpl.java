@@ -34,6 +34,7 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
@@ -245,7 +246,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			XContentBuilder xContentBuilder = XContentFactory.jsonBuilder().startObject();
 			getXcontentBuilder(field, xContentBuilder);
 			xContentBuilder.endObject();
-			bulkRequestBuilder.add(client.prepareIndex(indexName, type, id).setSource(xContentBuilder));
+			bulkRequestBuilder.add(client.prepareIndex(indexName, type, id).setSource(xContentBuilder)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 			BulkResponse bulkResponse = bulkRequestBuilder.get();
 			if (bulkResponse.hasFailures()) {
 				String buildFailureMessage = bulkResponse.buildFailureMessage();
@@ -368,7 +369,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	public Boolean delDocByIndexName(String indexName, String type, String id) {
 		Boolean existEsIndex = isExistEsIndex(indexName);
 		if (existEsIndex) {
-			client.prepareDelete(indexName, type, id).execute().actionGet();
+			client.prepareDelete(indexName, type, id).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE).execute().actionGet();
 			logger.info("删除doc成功");
 			return true;
 		} else {
@@ -687,7 +688,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 				XContentBuilder xContentBuilder = XContentFactory.jsonBuilder().startObject();
 				getXcontentBuilder(map, xContentBuilder);
 				xContentBuilder.endObject();
-				bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(xContentBuilder));
+				bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(xContentBuilder)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 		  }
 		}catch(Exception e){
 			logger.error("拼接数据出现问题", e);

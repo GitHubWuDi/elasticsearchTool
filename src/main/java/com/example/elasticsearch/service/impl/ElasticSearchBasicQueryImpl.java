@@ -12,6 +12,11 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +32,7 @@ public class ElasticSearchBasicQueryImpl implements ElasticSearchBasicQuery {
 	private static Logger logger = Logger.getLogger(ElasticSearchBasicQueryImpl.class);
 	
 	@Override
-	public List<Map<String, Object>> queryElasticSearch() {
+	public List<Map<String, Object>> queryElasticSearchBasic() {
 		//Filter查询
 		List<Map<String,Object>> list = new ArrayList<>();
 		BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
@@ -38,6 +43,17 @@ public class ElasticSearchBasicQueryImpl implements ElasticSearchBasicQuery {
 			list.add(searchHit.getSourceAsMap());
 		}
 		return list;
+	}
+
+	@Override
+	public void queryElasticSeachAggregations(String indexName,String type,String aggName,String fieldName) {
+		//range查询测试
+		//Range
+		RangeAggregationBuilder rangeAggregationBuilder = AggregationBuilders.range(aggName).field(fieldName).keyed(true).addRange("small", 1000, 2000).addRange("medium", 3000, 5000).addRange("medium", 5000, 10000);
+		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(indexName).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		SearchResponse searchResponse = searchRequestBuilder.addAggregation(rangeAggregationBuilder).execute().actionGet();
+		Map<String, Aggregation> asMap = searchResponse.getAggregations().getAsMap();
+		logger.info(asMap);
 	}
 
 }

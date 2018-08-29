@@ -47,8 +47,12 @@ public class ElasticsearchQueryTests {
 
 	@Test
 	public void elasticQuerySearch(){
-		List<Map<String,Object>> queryElasticSearch = elasticSearchBasicQuery.queryElasticSearch();
+		List<Map<String,Object>> queryElasticSearch = elasticSearchBasicQuery.queryElasticSearchBasic();
 		logger.info(queryElasticSearch.size());
 	}
    
+	@Test
+	public void elasticQuerySearchAggregations(){
+		elasticSearchBasicQuery.queryElasticSeachAggregations("books", "test", "range Aggs", "word_count");
+	}
 }

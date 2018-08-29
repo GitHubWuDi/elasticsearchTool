@@ -6,8 +6,15 @@ import java.util.Map;
 public interface ElasticSearchBasicQuery {
     
 	/**
-	 * 查询ElasticSearch
+	 * 基础查询查询ElasticSearch
 	 * @return
 	 */
-	public List<Map<String,Object>> queryElasticSearch();
+	public List<Map<String,Object>> queryElasticSearchBasic();
+	
+	
+	/**
+	 * es聚合查询
+	 * @return
+	 */
+	public void queryElasticSeachAggregations(String indexName,String type,String aggName,String fieldName);
 }

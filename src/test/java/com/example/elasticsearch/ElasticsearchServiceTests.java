@@ -145,9 +145,9 @@ public class ElasticsearchServiceTests {
 		bookVO.setPublish_date(new Date());
 		bookVO.setGt_word_count(1000);
 		bookVO.setLt_word_count(2000);
-		bookVO.setId("5");
-		bookVO.setTitle("elasticsearch学习");
-		bookVO.setWord_count(5000);
+		bookVO.setId("6");
+		bookVO.setTitle("浪潮之巅");
+		bookVO.setWord_count(7000);
 		PersonVO personVO = new PersonVO();
 		personVO.setAge(10);
 		personVO.setName("wudi");
