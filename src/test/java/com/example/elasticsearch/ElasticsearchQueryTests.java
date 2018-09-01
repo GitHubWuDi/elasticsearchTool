@@ -15,6 +15,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,5 +57,11 @@ public class ElasticsearchQueryTests {
 	@Test
 	public void elasticQuerySearchAggregations(){
 		elasticSearchBasicQuery.queryElasticSeachAggregations("books", "test", "range Aggs", "word_count");
+	}
+	
+	@Test
+	public void elasticQuerySearchFilterAggregations(){
+		TermQueryBuilder termQuery = QueryBuilders.termQuery("author", "wudi");
+		elasticSearchBasicQuery.queryElasticSearchFilterAggregations("books", "test", "filter Aggs", termQuery);
 	}
 }

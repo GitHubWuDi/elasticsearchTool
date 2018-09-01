@@ -3,6 +3,8 @@ package com.example.elasticsearch.service;
 import java.util.List;
 import java.util.Map;
 
+import org.elasticsearch.index.query.QueryBuilder;
+
 public interface ElasticSearchBasicQuery {
     
 	/**
@@ -17,4 +19,14 @@ public interface ElasticSearchBasicQuery {
 	 * @return
 	 */
 	public void queryElasticSeachAggregations(String indexName,String type,String aggName,String fieldName);
+	
+	
+	/**
+	 * FilterAggregations查询
+	 * @param indexName
+	 * @param type
+	 * @param aggName
+	 * @param fieldName
+	 */
+	public void queryElasticSearchFilterAggregations(String indexName, String type, String aggName, QueryBuilder termQuery);
 }

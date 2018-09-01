@@ -294,7 +294,8 @@ public class ElasticsearchServiceTests {
 		lrange.setStart(5000);
 		lrange.setEnd(10000);
 		rangeList.add(lrange);
-		SearchField searchField = new SearchField("word_count", FieldType.Range, rangeList, null);
+		SearchField lastField = new SearchField("word_count", FieldType.Numberstat, null);
+		SearchField searchField = new SearchField("word_count", FieldType.Range, rangeList, lastField);
 		List<QueryCondition> conditions = new ArrayList<>();
 		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, searchField);
 		logger.info(list.size());
