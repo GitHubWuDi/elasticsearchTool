@@ -52,6 +52,7 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,6 +65,7 @@ import com.example.elasticsearch.util.DateUtil;
 import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.EsDocVO;
+import com.example.elasticsearch.vo.RangeVO;
 import com.example.elasticsearch.vo.SearchField;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -498,6 +500,9 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		case Object:
 			aggregation = AggregationBuilders.terms(aggsName).field(fieldName);
 			break;
+		case Range:
+			aggregation=getRangeAggregationBuilder(field, fieldName, aggsName);
+			break;
 		case NumberSum:
 			aggregation = AggregationBuilders.sum(aggsName).field(fieldName);
 		case NumberAvg:
@@ -525,6 +530,25 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			}
 		}
 		return aggregation;
+	}
+
+	/**
+	 * 根据range分段查询
+	 * @param field
+	 * @param fieldName
+	 * @param aggsName
+	 * @return
+	 */
+	private AggregationBuilder getRangeAggregationBuilder(SearchField field, String fieldName, String aggsName) {
+		List<RangeVO> rangeList = field.getRangeList();
+		RangeAggregationBuilder  rangeAggregation= AggregationBuilders.range(aggsName).field(fieldName).keyed(true);
+		for (RangeVO rangeVO : rangeList) {
+			String metricName = rangeVO.getMetricName();
+			long start = rangeVO.getStart();
+			long end = rangeVO.getEnd();
+			rangeAggregation.addRange(metricName,start,end);
+		}
+		return rangeAggregation;
 	}
 
 

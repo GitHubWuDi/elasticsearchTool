@@ -27,6 +27,7 @@ public class SearchField {
 	private long timeSpan = -1;
 	private DateHistogramInterval timeInterval;
 	private SearchField childField;
+	private List<RangeVO> rangeList;
 
 	/**
 	 * 增加一个分组字段
@@ -71,7 +72,7 @@ public class SearchField {
 	private  void checkChildFieldType(FieldType type, SearchField child){
 		if(child!=null){
 			if(type==FieldType.NumberAvg ||type==FieldType.NumberMax||type==FieldType.NumberMin||type==FieldType.NumberSum||type==FieldType.ObjectDistinctCount){
-				if(child.getFieldType()==FieldType.Date || child.getFieldType()==FieldType.String||child.getFieldType()==FieldType.Object){
+				if(child.getFieldType()==FieldType.Date || child.getFieldType()==FieldType.String||child.getFieldType()==FieldType.Object||child.getFieldType()==FieldType.Range){
 					throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "String,Object类型Field不能是count相关类型的子类型,请检查");
 				}
 			}
@@ -113,4 +114,19 @@ public class SearchField {
 		this.setTimeInterval(timeInterval);
 		this.setChildField(child);
 	}
+	/**
+	 * range构造函数
+	 * @param fieldName
+	 * @param type
+	 * @param rangeList
+	 * @param child
+	 */
+	public SearchField(String fieldName,FieldType type,List<RangeVO> rangeList,SearchField child){
+		checkChildFieldType(type, child);
+		this.setFieldName(fieldName);
+		this.setFieldType(type);
+		this.setRangeList(rangeList);
+		this.setChildField(child);
+	}
+	
 }

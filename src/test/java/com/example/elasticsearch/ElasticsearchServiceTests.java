@@ -24,6 +24,7 @@ import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.BookVO;
 import com.example.elasticsearch.vo.PersonVO;
+import com.example.elasticsearch.vo.RangeVO;
 import com.example.elasticsearch.vo.SearchField;
 
 /**
@@ -268,6 +269,30 @@ public class ElasticsearchServiceTests {
 		//SearchField searchField = new SearchField("publish_date", FieldType.Date, "yyyy-MM-dd", 24*60*60*1000, childField);
 		List<QueryCondition> conditions = new ArrayList<>();
 		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, childField);
+		logger.info(list.size());
+	}
+	
+	@Test
+	public void queryRangeTest(){
+		List<RangeVO> rangeList = new ArrayList<>();
+		RangeVO srange = new RangeVO();
+		srange.setMetricName("small");
+		srange.setStart(1000);
+		srange.setEnd(2000);
+		rangeList.add(srange);
+		RangeVO mrange = new RangeVO();
+		mrange.setMetricName("medium");
+		mrange.setStart(3000);
+		mrange.setEnd(5000);
+		rangeList.add(mrange);
+		RangeVO lrange = new RangeVO();
+		lrange.setMetricName("large");
+		lrange.setStart(5000);
+		lrange.setEnd(10000);
+		rangeList.add(lrange);
+		SearchField searchField = new SearchField("word_count", FieldType.Range, rangeList, null);
+		List<QueryCondition> conditions = new ArrayList<>();
+		List<Map<String,Object>> list = bookServiceTest.queryStatistics(conditions, searchField);
 		logger.info(list.size());
 	}
 }
