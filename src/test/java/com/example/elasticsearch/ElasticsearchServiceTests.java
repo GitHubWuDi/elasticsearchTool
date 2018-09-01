@@ -272,6 +272,10 @@ public class ElasticsearchServiceTests {
 		logger.info(list.size());
 	}
 	
+	/**
+	 * 数据结构
+	 * [{word_count=small, doc_count=0}, {word_count=medium, doc_count=1}, {word_count=large, doc_count=9}]
+	 */
 	@Test
 	public void queryRangeTest(){
 		List<RangeVO> rangeList = new ArrayList<>();
