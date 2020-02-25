@@ -24,15 +24,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.example.elasticsearch.enums.ResultCodeEnum;
+import com.example.elasticsearch.exception.ElasticSearchErrorEnum;
+import com.example.elasticsearch.exception.ElasticSearchException;
 import com.example.elasticsearch.model.PrimaryKey;
 import com.example.elasticsearch.util.DateUtil;
-import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.util.page.PageReq;
 import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.ElasticSearchVO;
 import com.example.elasticsearch.vo.EsDocVO;
+import com.example.elasticsearch.vo.IndexsInfoVO;
+import com.example.elasticsearch.vo.ScrollVO;
 import com.example.elasticsearch.vo.SearchField;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -154,8 +157,8 @@ public abstract class ElasticSearchService<T> {
 				break;
 			}
 			}catch(Exception e) {
-				 logger.error("拼接解析出现错误", e);
-				 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+				 logger.error("拼接解析出现错误:"+e.getMessage(), e);
+				 throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED,e);
 			}
 		}
 		return fieldsConvertMap;
@@ -198,8 +201,8 @@ public abstract class ElasticSearchService<T> {
 				 break;
 			 }
 		 }catch(Exception e){
-			 logger.error("List拼接解析出现错误", e);
-			 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			 logger.error("List拼接解析出现错误:"+e.getMessage(), e);
+			 throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED,e);
 		 }
 		return map;
 	 }
@@ -237,7 +240,7 @@ public abstract class ElasticSearchService<T> {
 			List<T> list = getResultList(searchResponse);
 			return list;
 		} else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			 throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	
@@ -256,7 +259,7 @@ public abstract class ElasticSearchService<T> {
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		} else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -276,7 +279,7 @@ public abstract class ElasticSearchService<T> {
 			List<T> list = getResultList(searchResponse);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -295,7 +298,7 @@ public abstract class ElasticSearchService<T> {
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -347,7 +350,7 @@ public abstract class ElasticSearchService<T> {
 			List<T> list = getResultList(searchResponse);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -396,7 +399,7 @@ public abstract class ElasticSearchService<T> {
 			PageRes<T> paginationResponse = getPaginationResponse(searchResponse);
 			return paginationResponse;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	
@@ -432,7 +435,7 @@ public abstract class ElasticSearchService<T> {
 			List<Map<String,Object>> list = ElasticSearchUtil.getMultiBucketsMap(field, aggregation);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -450,7 +453,7 @@ public abstract class ElasticSearchService<T> {
 		try {
 			idValue = BeanUtils.getProperty(entity, idField);
 		} catch (Exception  e) {
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "未配置的PrimaryKey依赖，请配置");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 		return idValue;
 	}
@@ -548,7 +551,7 @@ public abstract class ElasticSearchService<T> {
 			Boolean result = elasticSearchManage.delDocByIndexName(indexName, type, id.toString());
 			logger.info("result:"+result);
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	
@@ -561,7 +564,7 @@ public abstract class ElasticSearchService<T> {
 			String idValue = getIdValue(entity);
 			deleteById(idValue);
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	
@@ -577,8 +580,135 @@ public abstract class ElasticSearchService<T> {
 			}
 		refreshIndex();
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
+	
+	
+	
+	/**
+	 * scroll进行分页查询(选择对应的索引，第一次获得)
+	 * @param indexsInfoVO
+	 * @param conditions
+	 * @param value
+	 * @param sort
+	 * @param size
+	 * @return
+	 */
+	public ScrollVO<T> findAll(IndexsInfoVO indexsInfoVO,List<QueryCondition> conditions,String value, String sort,Integer size){
+		String[] indexs = indexsInfoVO.getIndex();
+		String[] type = indexsInfoVO.getType();
+		for (String index : indexs) {
+			Boolean index_status = elasticSearchManage.checkEsIndexState(index);
+			Boolean existEsIndex = elasticSearchManage.isExistEsIndex(index);
+			if(!existEsIndex||!index_status){
+				logger.info(index+"索引没有开启或不存在，请检查！");
+				throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
+			}
+		}
+		QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+		SortBuilder sortBuilder = null;
+		if (StringUtils.isNoneEmpty(value) && StringUtils.isNoneEmpty(sort)) {
+			if ("asc".equalsIgnoreCase(sort)) {
+				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.ASC);
+			} else {
+				sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
+			}
+		}
+		SearchResponse searchResponse = elasticSearchManage.getDocsByScroll(indexs,type, queryBuilder, sortBuilder,null,size);
+		ScrollVO<T> scrollVO = getScrollResultList(searchResponse);
+		return scrollVO;
+	}
+	
+	/**
+	 * 根据基本的索引名称获得对应一系列索引集合
+	 * @param baseIndexName
+	 * @return
+	 */
+	public String[] getIndexListByBaseIndexName(String baseIndexName){
+		String[] allIndex = elasticSearchManage.getAllIndex();
+		List<String> list = new ArrayList<>();
+		for (String index : allIndex) { //判断每个index,是否包括了baseIndexName
+			if(index.contains(baseIndexName)||index.contains(baseIndexName.toLowerCase())){
+				list.add(index);
+			}
+		}
+		String[] array = new String[list.size()];
+		String[] index_array = list.toArray(array);
+		return index_array;
+	}
+	
+	/**
+	 * scroll进行分页查询(全索引，第一次获得)
+	 * @param conditions
+	 * @param value
+	 * @param sort
+	 * @param size
+	 * @return
+	 */
+	public ScrollVO<T> findAll(List<QueryCondition> conditions, String value, String sort,Integer size){
+		if (isEsIndexExist() && checkESIndexState().equals("OPEN")){
+			String indexName = getIndexName();
+			String type = getType();
+			String[] indexNameArr = getIndexListByBaseIndexName(indexName); 
+			QueryBuilder queryBuilder = ElasticSearchUtil.toQueryBuilder(conditions);
+			SortBuilder sortBuilder = null;
+			if (StringUtils.isNoneEmpty(value) && StringUtils.isNoneEmpty(sort)) {
+				if ("asc".equalsIgnoreCase(sort)) {
+					sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.ASC);
+				} else {
+					sortBuilder = SortBuilders.fieldSort(value).order(SortOrder.DESC);
+				}
+			}
+			SearchResponse searchResponse = elasticSearchManage.getDocsByScroll(indexNameArr, new String[]{type}, queryBuilder, sortBuilder,null,size);
+			ScrollVO<T> scrollVO = getScrollResultList(searchResponse);
+			return scrollVO;
+		}else{
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
+		}
+	}
+	
+	
+	/**
+	 * es获得数据获得ScrollVO数据
+	 * @param searchResponse
+	 * @return
+	 */
+	private ScrollVO<T> getScrollResultList(SearchResponse searchResponse){
+		ScrollVO<T> scroll = new ScrollVO<>();
+		Gson gson = new GsonBuilder().setDateFormat(DateUtil.DEFAULT_DATE_PATTERN).create();
+		ElasticSearchVO<T> elasticSearchVO = gson.fromJson(searchResponse.toString(),new TypeToken<ElasticSearchVO<T>>() {
+				}.getType());
+		List<T> list = elasticSearchVO.getList(clazz);
+		String _scroll_id = elasticSearchVO.get_scroll_id();
+		long total = elasticSearchVO.getHits().getTotal();
+		scroll.setList(list);
+		scroll.setScrollId(_scroll_id);
+		scroll.setTotal(total);
+		return scroll;
+	}
+	
+	/**
+	 * 通过scrollId查询游标数据
+	 * @param scrollId
+	 * @return
+	 */
+	public ScrollVO<T> searchByScrollId(String scrollId){
+		SearchResponse searchResponse = elasticSearchManage.searchByScrollId(scrollId);
+		ScrollVO<T> scrollVO = getScrollResultList(searchResponse);
+		return scrollVO;
+	}
+	
+	
+	/**
+	 * 通过ScrollId清除游标
+	 * @param scrollId
+	 * @return
+	 */
+	public Boolean cleanScrollId(String scrollId) {
+		boolean result = elasticSearchManage.clearScroll(scrollId);
+		return result;
+	}
+	
 	
 }

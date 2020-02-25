@@ -21,6 +21,7 @@ import lombok.Data;
 @Data
 public class ElasticSearchVO<T> {
      
+	private String _scroll_id; //游标ID
 	private int took;
 	private boolean timed_out;
 	private Shards _shards;

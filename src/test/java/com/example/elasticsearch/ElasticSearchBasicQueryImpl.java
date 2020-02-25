@@ -1,4 +1,4 @@
-package com.example.elasticsearch.service.impl;
+package com.example.elasticsearch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +18,10 @@ import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.filter.FiltersAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.example.elasticsearch.service.ElasticSearchBasicQuery;
 
 
 @Service
@@ -59,13 +57,13 @@ public class ElasticSearchBasicQueryImpl implements ElasticSearchBasicQuery {
 		logger.info(asMap);
 	}
 
-	@Override
-	public void queryElasticSearchFilterAggregations(String indexName, String type, String aggName, QueryBuilder termQuery){
-		FiltersAggregationBuilder filtersAggregationBuilder = AggregationBuilders.filters(aggName, termQuery);
-		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(indexName).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
-		SearchResponse searchResponse = searchRequestBuilder.addAggregation(filtersAggregationBuilder).execute().actionGet();
-		Map<String, Aggregation> asMap = searchResponse.getAggregations().getAsMap();
-		logger.info(asMap);
-	}
+//	@Override
+//	public void queryElasticSearchFilterAggregations(String indexName, String type, String aggName, QueryBuilder termQuery){
+//		FilterAggregationBuilder filtersAggregationBuilder = AggregationBuilders.filters(aggName, termQuery);
+//		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(indexName).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+//		SearchResponse searchResponse = searchRequestBuilder.addAggregation(filtersAggregationBuilder).execute().actionGet();
+//		Map<String, Aggregation> asMap = searchResponse.getAggregations().getAsMap();
+//		logger.info(asMap);
+//	}
 
 }

@@ -18,7 +18,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.example.elasticsearch.enums.FieldType;
 import com.example.elasticsearch.service.ElasticSearchMapManage;
-import com.example.elasticsearch.service.test.BookServiceTest;
 import com.example.elasticsearch.util.page.PageReq;
 import com.example.elasticsearch.util.page.PageRes;
 import com.example.elasticsearch.util.page.QueryCondition;

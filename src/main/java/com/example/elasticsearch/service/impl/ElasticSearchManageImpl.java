@@ -31,8 +31,11 @@ import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRespons
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.search.ClearScrollRequestBuilder;
+import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.transport.TransportClient;
@@ -44,14 +47,19 @@ import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.ReindexAction;
+import org.elasticsearch.index.reindex.ReindexRequestBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,10 +67,10 @@ import org.springframework.stereotype.Component;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.example.elasticsearch.enums.FieldType;
-import com.example.elasticsearch.enums.ResultCodeEnum;
+import com.example.elasticsearch.exception.ElasticSearchErrorEnum;
+import com.example.elasticsearch.exception.ElasticSearchException;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.util.DateUtil;
-import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.EsDocVO;
 import com.example.elasticsearch.vo.RangeVO;
@@ -173,8 +181,12 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		if (result) {
 			ImmutableOpenMap<String, MappingMetaData> mappings = client.admin().cluster().prepareState().execute()
 					.actionGet().getState().getMetaData().getIndices().get(indexName).getMappings();
-			Map<String, Object> map = mappings.get(type).sourceAsMap();
-			return map;
+			try {
+				Map<String, Object> map = mappings.get(type).sourceAsMap();
+				return map;
+			} catch (IOException e) {
+				throw new RuntimeException("获得对应的mapping的值！");
+			}
 		} else {
 			return null;
 		}
@@ -229,16 +241,14 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	}
 
 	@Override
-	public String getSetting(String indexName) {
+	public Settings getSetting(String indexName) {
 		Settings settings = null;
 		GetSettingsResponse settingsResponse = client.admin().indices().prepareGetSettings(indexName).get();
 		ImmutableOpenMap<String, Settings> map = settingsResponse.getIndexToSettings();
 		for (ObjectObjectCursor<String, Settings> cursor : map) {
 			settings = cursor.value;
 		}
-		String settingInfo = settings.toString();
-		logger.info("settings:" + settingInfo);
-		return settingInfo;
+		return settings;
 	}
 
 	@Override
@@ -258,7 +268,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			}
 		} catch (Exception e) {
 			logger.error("创建doc报错", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), ResultCodeEnum.ERROR.getMsg());
+			throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED);
 		}
 	}
 	
@@ -299,8 +309,8 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 				break;
 			}
 		}catch(Exception e){
-			logger.error("getContextBuilderByList报错", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			logger.error("getContextBuilderByList报错:"+e.getMessage(), e);
+			throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED);
 		}
 	}
 	
@@ -362,7 +372,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 			}
 		}catch(Exception e){
 			logger.error("getXcontentBuilder报错", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED);
 		}
 		
 	}
@@ -460,8 +470,52 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	@Override
 	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder, SortBuilder sortBuilder,
 			SearchField field, int start, int size) {
-		SearchResponse searchResponse = null;
+		
+		Integer maxResultWindow = getMaxResultWindow(index);
 		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		return selectCondition(queryBuilder, sortBuilder, field, start, size, searchRequestBuilder,maxResultWindow);
+	
+	}
+	
+	/**
+	 * 根据索引获得最大的ResultWindow
+	 * @param indexName
+	 * @return
+	 */
+	private Integer getMaxResultWindow(String[] indexNames) {
+		Integer max_result_window = 10000;
+		for (String indexName : indexNames) {
+			Settings settings = this.getSetting(indexName);
+			if(settings!=null&&settings.keySet().contains("index.max_result_window")){
+				String setting = settings.get("index.max_result_window");
+				Integer indexResultWinodw = Integer.parseInt(setting);
+				if(indexResultWinodw>max_result_window){  //取得最大的max_result_window
+					max_result_window = indexResultWinodw;
+				}
+			}
+		}
+		return max_result_window;
+	}
+	
+	@Override
+	public SearchResponse getDocs(String[] index, String[] type, QueryBuilder queryBuilder, SortBuilder sortBuilder,SearchField field, int start, int size){
+		Integer maxResultWindow = getMaxResultWindow(index);
+		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		return selectCondition(queryBuilder, sortBuilder, field, start, size, searchRequestBuilder,maxResultWindow);
+	}
+	
+	/**
+	 * 筛选分页查询该方式
+	 * @param queryBuilder
+	 * @param sortBuilder
+	 * @param field
+	 * @param start
+	 * @param size
+	 * @param searchRequestBuilder
+	 * @return
+	 */
+	private SearchResponse selectCondition(QueryBuilder queryBuilder, SortBuilder sortBuilder, SearchField field,int start, int size, SearchRequestBuilder searchRequestBuilder,int maxResultWindow) {
+		SearchResponse searchResponse = null;
 		// 筛选条件
 		if (queryBuilder != null) {
 			searchRequestBuilder.setQuery(queryBuilder);
@@ -472,12 +526,12 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		}
 		// 聚合查询
 		if (field != null) {
-			AggregationBuilder aggregationsBuilder = getAggregationsBuilder(field);
+			AggregationBuilder aggregationsBuilder = getAggregationsBuilder(field,maxResultWindow);
 			searchRequestBuilder.addAggregation(aggregationsBuilder);
 		}
 		searchResponse = searchRequestBuilder.setFrom(start).setSize(size).execute().actionGet();
 		return searchResponse;
-	}
+}
 
 	/**
 	 * 获得聚合属性
@@ -485,20 +539,33 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 	 * @param field
 	 * @return
 	 */
-	private AggregationBuilder getAggregationsBuilder(SearchField field) {
+	private AggregationBuilder getAggregationsBuilder(SearchField field,int maxResultWindow) {
 		String fieldName = field.getFieldName(); // 属性名称
 		String aggsName = "aggs" + fieldName; // 聚合名称
 		FieldType fieldType = field.getFieldType(); // 属性类型
 		String timeFormat = field.getTimeFormat(); // 时间格式
 		long timeSpan = field.getTimeSpan(); // 时间间隔
+		
+		DateHistogramInterval timeInterval = field.getTimeInterval();
 		List<SearchField> childrenField = field.getChildrenField(); // 子aggs
 		AggregationBuilder aggregation = null;
+		
+		Integer size = field.getSize();
+		if(size==null||size.equals(0)) {
+			size=maxResultWindow;
+		}
+		
 		switch (fieldType) {
 		case Date:
-			aggregation = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);
+			if(timeSpan!=-1) {
+				aggregation = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeSpan, childrenField);				
+			}else {
+				aggregation = getDateAggregationBuilder(fieldName, aggsName, timeFormat,timeInterval, childrenField);
+			}
+			break;
 		case String:
 		case Object:
-			aggregation = AggregationBuilders.terms(aggsName).field(fieldName);
+			aggregation = AggregationBuilders.terms(aggsName).field(fieldName).size(size);
 			break;
 		case Range:
 			aggregation=getRangeAggregationBuilder(field, fieldName, aggsName);
@@ -524,7 +591,7 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		if (childrenField != null && childrenField.size() > 0) {
 			for (SearchField searchField : childrenField) {
 				if (searchField != null) {
-					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField);
+					AggregationBuilder aggregationsBuilder = getAggregationsBuilder(searchField,maxResultWindow);
 					aggregation.subAggregation(aggregationsBuilder);
 				}
 			}
@@ -573,6 +640,21 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 		}
 		return dateHistogramAggregationBuilder;
 	}
+	
+	
+	private AggregationBuilder getDateAggregationBuilder(String fieldName, String aggsName, String timeFormat,
+			DateHistogramInterval timeInterval, List<SearchField> childrenField) {
+		DateHistogramAggregationBuilder dateHistogramAggregationBuilder = null;
+		if (timeInterval !=null) {
+			dateHistogramAggregationBuilder = AggregationBuilders.dateHistogram(aggsName).field(fieldName)
+					.dateHistogramInterval(timeInterval).format(timeFormat);
+		} else {
+			dateHistogramAggregationBuilder = AggregationBuilders.dateHistogram(aggsName).field(fieldName)
+					.format(timeFormat);
+		}
+		return dateHistogramAggregationBuilder;
+	}
+	
 
 	@Override
 	public String getClusterName() {
@@ -715,12 +797,97 @@ public class ElasticSearchManageImpl implements ElasticSearchManage {
 				bulkRequest.add(client.prepareIndex(indexName, type, idValue).setSource(xContentBuilder)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 		  }
 		}catch(Exception e){
-			logger.error("拼接数据出现问题", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			logger.error("拼接数据出现问题:"+e.getMessage(), e);
+			throw new ElasticSearchException(ElasticSearchErrorEnum.UNSPECIFIED);
 		}
 		BulkResponse bulkResponse = bulkRequest.execute().actionGet();
 		String result = bulkResponse.toString();
 		return result;
+	}
+
+	@Override
+	public SearchResponse getDocsByScroll(String index, String type, QueryBuilder queryBuilder, SortBuilder sortBuilder,
+			SearchField field, int size) {
+		Integer maxResultWindow = getMaxResultWindow(index);
+		
+		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(index).setTypes(type).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		SearchResponse searchResponse = selectConditionByScroll(queryBuilder, sortBuilder, field, size, searchRequestBuilder,maxResultWindow);
+		return searchResponse;
+	
+	}
+
+	private SearchResponse selectConditionByScroll(QueryBuilder queryBuilder, SortBuilder sortBuilder,SearchField field, int size, SearchRequestBuilder searchRequestBuilder, Integer maxResultWindow) {
+		SearchResponse searchResponse = null;
+		// 筛选条件
+		if (queryBuilder != null) {
+			searchRequestBuilder.setQuery(queryBuilder);
+		}
+		// 排序
+		if (sortBuilder != null) {
+			searchRequestBuilder.addSort(sortBuilder);
+		}
+		// 聚合查询
+		if (field != null) {
+			AggregationBuilder aggregationsBuilder = getAggregationsBuilder(field,maxResultWindow);
+			searchRequestBuilder.addAggregation(aggregationsBuilder);
+		}
+		//采用游标获得对应的搜索结果
+		searchResponse = searchRequestBuilder.setSize(size).setScroll(TimeValue.timeValueMinutes(60)).execute().actionGet();
+		return searchResponse;
+    
+	}
+
+	private Integer getMaxResultWindow(String index) {
+		Integer max_result_window = 10000;
+		Settings settings = this.getSetting(index);
+		if (settings != null && settings.keySet().contains("index.max_result_window")) {
+			String setting = settings.get("index.max_result_window");
+			Integer indexResultWinodw = Integer.parseInt(setting);
+			if (indexResultWinodw > max_result_window) { // 取得最大的max_result_window
+				max_result_window = indexResultWinodw;
+			}
+		}
+
+		return max_result_window;
+	
+	}
+	
+	@Override
+	public SearchResponse getDocsByScroll(String[] indexs, String[] types, QueryBuilder queryBuilder,
+			SortBuilder sortBuilder, SearchField field, int size) {
+        Integer maxResultWindow = getMaxResultWindow(indexs);
+ 		SearchRequestBuilder searchRequestBuilder = client.prepareSearch(indexs).setTypes(types).setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+		SearchResponse searchResponse = selectConditionByScroll(queryBuilder, sortBuilder, field, size, searchRequestBuilder,maxResultWindow);
+		return searchResponse;
+	}
+
+	@Override
+	public SearchResponse searchByScrollId(String scrollId) {
+		SearchScrollRequestBuilder searchScrollRequestBuilder = client.prepareSearchScroll(scrollId);
+		searchScrollRequestBuilder.setScroll(TimeValue.timeValueMinutes(60));
+		SearchResponse searchResponse = searchScrollRequestBuilder.get();
+		return searchResponse;
+	}
+
+	@Override
+	public boolean clearScroll(String scrollId) {
+		ClearScrollRequestBuilder clearScrollRequestBuilder = client.prepareClearScroll();
+		clearScrollRequestBuilder.addScrollId(scrollId);
+		ClearScrollResponse response = clearScrollRequestBuilder.get();
+		boolean succeeded = response.isSucceeded();
+		return succeeded;
+	}
+
+	@Override
+	public void reindexTransportData(String sourceIndexName, String destinationIndexName) {
+		try{
+			BulkByScrollResponse response = new ReindexRequestBuilder(client, ReindexAction.INSTANCE).source(sourceIndexName).destination(destinationIndexName).get();
+			logger.info("转移数据成功");			
+		}catch(ElasticSearchException e) {
+			logger.error("es数据转移失败，原因："+e.getMessage(), e);
+		}
+		
+		
 	}
 
 }

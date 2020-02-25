@@ -1,4 +1,4 @@
-package com.example.elasticsearch.service.test;
+package com.example.elasticsearch;
 
 import org.springframework.stereotype.Service;
 

@@ -19,10 +19,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.elasticsearch.enums.ResultCodeEnum;
+import com.example.elasticsearch.exception.ElasticSearchErrorEnum;
+import com.example.elasticsearch.exception.ElasticSearchException;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.service.ElasticSearchMapManage;
 import com.example.elasticsearch.util.DateUtil;
-import com.example.elasticsearch.util.ElasticSearchException;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.util.page.PageReq;
 import com.example.elasticsearch.util.page.PageRes;
@@ -118,7 +119,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			List<Map<String,Object>> list = getResultList(searchResponse);
 			return list;
 		} else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	
 	}
@@ -145,7 +146,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		} else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	
 	}
@@ -159,7 +160,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			List<Map<String, Object>> list = getResultList(searchResponse);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -171,7 +172,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			long totalHits = searchResponse.getHits().getTotalHits();
 			return totalHits;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -206,7 +207,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			List<Map<String, Object>> list = getResultList(searchResponse);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	
 	}
@@ -234,7 +235,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			PageRes<Map<String, Object>> paginationResponse = getPaginationResponse(searchResponse);
 			return paginationResponse;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	
@@ -259,7 +260,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			List<Map<String,Object>> list = ElasticSearchUtil.getMultiBucketsMap(field, aggregation);
 			return list;
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 
@@ -333,7 +334,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			Boolean result = elasticSearchManage.delDocByIndexName(indexName, type, id.toString());
 			logger.info("result:"+result);
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	
 		
@@ -348,7 +349,7 @@ public class ElasticSearchMapManageImpl implements ElasticSearchMapManage {
 			}
 		refreshIndex(indexName);
 		}else{
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "请检查索引是否存在或状态");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.INDEX_IS_EXIST);
 		}
 	}
 	

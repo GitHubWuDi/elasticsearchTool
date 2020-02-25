@@ -201,7 +201,7 @@ public class ElasticsearchManageTests {
 	@Test
 	public void getSettingTest() {
 		String indexName = "kafka_elk_newlog-2018.07.23";
-		String setting = elasticSearchManage.getSetting(indexName);
+		Settings setting = elasticSearchManage.getSetting(indexName);
 	}
 
 	/**

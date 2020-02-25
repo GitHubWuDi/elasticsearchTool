@@ -1,6 +1,5 @@
 package com.example.elasticsearch.service;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,7 +124,7 @@ public interface ElasticSearchManage {
 	 * @param indexName
 	 * @return
 	 */
-	public String getSetting(String indexName);
+	public Settings getSetting(String indexName);
 	
 	/**
 	 * 根据index,type,id,field字段创建对应doc
@@ -194,7 +193,7 @@ public interface ElasticSearchManage {
 	public Map<String,Object> getDoc(String indexName, String type,String id);
 	
 	/**
-	 * 根据index，type，queryBuilder进行查询
+	 * 根据单个index，type，queryBuilder进行查询
 	 * @param index
 	 * @param type
 	 * @param queryBuilder
@@ -204,6 +203,21 @@ public interface ElasticSearchManage {
 	 * @return
 	 */
 	public SearchResponse getDocs(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder ,SearchField field, int start, int size);
+	
+	
+	/**
+	 * 根据索引数组，类型数组进行相关的查询
+	 * @param index
+	 * @param type
+	 * @param queryBuilder
+	 * @param sortBuilder
+	 * @param field
+	 * @param start
+	 * @param size
+	 * @return
+	 */
+	public SearchResponse getDocs(String[] index, String[] type, QueryBuilder queryBuilder, SortBuilder sortBuilder,SearchField field, int start, int size);
+	
 	
 	/**
 	 * 获得集群名称
@@ -295,5 +309,61 @@ public interface ElasticSearchManage {
 	 * @return
 	 */
 	public String bulkCreateDocs(String indexName, String type,List<EsDocVO> list);
+	
+	
+	
+	
+	/**
+	 * 指定索引采用游标分页查询大批量分页数据查询
+	 * @param index
+	 * @param type
+	 * @param queryBuilder
+	 * @param sortBuilder
+	 * @param field
+	 * @param size
+	 * @return
+	 */
+	public SearchResponse getDocsByScroll(String index, String type, QueryBuilder queryBuilder,SortBuilder sortBuilder ,SearchField field, int size);
+	
+	
+	
+	
+	/**
+	 * 多索引采用有游标去查（对应大批次分页查询）
+	 * @param index
+	 * @param type
+	 * @param queryBuilder
+	 * @param sortBuilder
+	 * @param field
+	 * @param size
+	 * @return
+	 */
+	public SearchResponse getDocsByScroll(String[] indexs, String[] types, QueryBuilder queryBuilder, SortBuilder sortBuilder,
+			SearchField field, int size);
+	
+	
+	
+	/**
+	 * 根据scrollId获得对应的查询结果
+	 * @param scrollId
+	 * @return
+	 */
+	public SearchResponse searchByScrollId(String scrollId);
+	
+	
+	/**
+	 * 清除滚动游标Id，表示分页已经结束
+	 * @param scrollId
+	 * @return
+	 */
+	public boolean clearScroll(String scrollId);
+	
+	
+	/**
+	 * 将源索引数据移动到新的索引当中
+	 * @param sourceIndexName
+	 * @param destinationIndexName
+	 */
+	public void reindexTransportData(String sourceIndexName,String destinationIndexName);
 	
 }

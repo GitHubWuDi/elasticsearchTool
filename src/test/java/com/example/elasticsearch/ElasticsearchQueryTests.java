@@ -24,7 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.example.elasticsearch.service.ElasticSearchBasicQuery;
 import com.example.elasticsearch.service.ElasticSearchManage;
 import com.example.elasticsearch.util.ElasticSearchUtil;
 import com.example.elasticsearch.vo.BookVO;
@@ -62,6 +61,6 @@ public class ElasticsearchQueryTests {
 	@Test
 	public void elasticQuerySearchFilterAggregations(){
 		TermQueryBuilder termQuery = QueryBuilders.termQuery("author", "wudi");
-		elasticSearchBasicQuery.queryElasticSearchFilterAggregations("books", "test", "filter Aggs", termQuery);
+		//elasticSearchBasicQuery.queryElasticSearchFilterAggregations("books", "test", "filter Aggs", termQuery);
 	}
 }

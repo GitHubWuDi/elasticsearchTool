@@ -30,6 +30,8 @@ import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.aggregations.metrics.stats.Stats;
 
 import com.example.elasticsearch.enums.ResultCodeEnum;
+import com.example.elasticsearch.exception.ElasticSearchErrorEnum;
+import com.example.elasticsearch.exception.ElasticSearchException;
 import com.example.elasticsearch.util.page.QueryCondition;
 import com.example.elasticsearch.vo.SearchField;
 import com.google.gson.Gson;
@@ -58,8 +60,8 @@ public class ElasticSearchUtil {
 			builder = builder.endObject().endObject();
 			return builder;
 		} catch (IOException e) {
-			logger.error("构造错误", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
+			logger.error("构造错误:"+e.getMessage(), e);
+			throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 		}
 	}
 
@@ -123,7 +125,7 @@ public class ElasticSearchUtil {
 			return rootBuilder;
 		} catch (Exception e) {
 			logger.error("解析匹配错误", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "构造错误");
+			throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 		}
 	}
 
@@ -187,7 +189,7 @@ public class ElasticSearchUtil {
 			}
 			}catch(Exception e) {
 				 logger.error("拼接解析出现错误", e);
-				 throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+				 throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 			}
 		}
 		return fieldsConvertMap;
@@ -386,7 +388,7 @@ public class ElasticSearchUtil {
 			typeName = ts.getTypeName();
 		} catch (Exception e) {
 			logger.info("泛型实例化异常", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 		}
 		return typeName;
 	}
@@ -441,7 +443,7 @@ public class ElasticSearchUtil {
 			}
 		} catch (Exception e) {
 			logger.error("List数据解析出现错误", e);
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), e.getMessage());
+			throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 		}
 		return map;
 	}
@@ -499,7 +501,8 @@ public class ElasticSearchUtil {
 			}
 			return map;
 		} catch (Exception e) {
-			throw new ElasticSearchException(ResultCodeEnum.ERROR.getCode(), "object转map出现错误");
+			logger.error("object转map出现错误:"+e.getMessage(), e);
+			throw new ElasticSearchException(ElasticSearchErrorEnum.CONSTRUCT_ERROR);
 		}
 
 	}
